@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # load libraries
-import os,sys
+import sys
 try:
     from fastapi import FastAPI
     from fastapi.responses import RedirectResponse
@@ -11,7 +11,9 @@ except Exception as e:
     sys.exit(-1)
 
 # Build UI
-from libs.sd_ui_local import StableDiffusionUI, GRADIO_CUSTOM_PATH
+from libs.sd_ui_local import StableDiffusionUI
+from libs.vars import GRADIO_CUSTOM_PATH
+
 # build gradio ui object
 sd_ui = StableDiffusionUI()
 sd_ui.buildUi()

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 # load libs
-import base64
 try:
     from torch import Generator
     import random
@@ -29,12 +28,12 @@ RANDOM_BIT_LENGTH = 64
 #  }
 
 # prepare the payload
-def prepare_payload(prompt,
-                 negative_prompt="",
-                 steps=10,
-                 width=512, height=512,
-                 cfg=7,
-                 seed=-1):
+def format_metadata(prompt,
+                    negative_prompt="",
+                    steps=10,
+                    width=512, height=512,
+                    cfg=7,
+                    seed=-1, scheduler=None):
     # prepare seed
     if seed == -1:
         custom_seed = random.getrandbits(RANDOM_BIT_LENGTH)
@@ -54,6 +53,7 @@ def prepare_payload(prompt,
                 "height": height,
                 "guidance_scale": cfg,
                 "seed": custom_seed,
+                "scheduler": scheduler,
             }
         ]
     }
@@ -64,13 +64,14 @@ def prepare_payload(prompt,
 
 # callback for sd generation on a local machine
 def local_prediction(model_pipeline,
-                 prompt,
-                 negative_prompt="",
-                 steps=10,
-                 width=512, height=512,
-                 guidance_scale=7,
-                 seed=-1,
-                 accelerator="cpu"):
+                     prompt,
+                     negative_prompt="",
+                     steps=10,
+                     width=512, height=512,
+                     guidance_scale=7,
+                     seed=-1,
+                     scheduler=None,
+                     accelerator="cpu"):
     # prepare generator object
     if seed == -1:
         gen = Generator(accelerator).manual_seed(random.getrandbits(RANDOM_BIT_LENGTH))
@@ -87,9 +88,10 @@ def local_prediction(model_pipeline,
                                 generator=gen)
 
     # generation metagada payload
-    metadata = prepare_payload(prompt=prompt,
+    metadata = format_metadata(prompt=prompt,
                                negative_prompt=negative_prompt,
                                steps=steps, width=width, height=height,
-                               cfg=guidance_scale, seed=seed)
+                               cfg=guidance_scale, seed=seed,
+                               scheduler=scheduler)
 
     return prediction.images[0], metadata
