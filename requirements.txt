@@ -2,6 +2,7 @@ gradio
 pillow
 requests
 fastapi
+fastapi[standard]
 starlette
 torch
 diffusers
