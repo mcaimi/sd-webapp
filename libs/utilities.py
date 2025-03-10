@@ -2,10 +2,24 @@
 
 import struct
 import json
+import os
+from pathlib import Path
 from .vars import GRADIO_MODELS_PATH
 
 SFT_HEADER_LEN = 8
 
+
+# scrape model filenames from the filesystem
+def enumerate_models(path: str = GRADIO_MODELS_PATH) -> dict:
+    mp = Path(path)
+    model_files = mp.glob("**/*.safetensors")
+
+    # populate dictionary
+    available_models = {}
+    for filename in model_files:
+        available_models[os.path.basename(filename)] = filename
+
+    return available_models
 
 # open a safetensors file and read its header
 def read_safetensors_header(filename: str) -> str:

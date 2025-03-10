@@ -2,11 +2,9 @@
 
 # import libs
 try:
-    import os
     import gradio as gr
-    from pathlib import Path
     from libs.callbacks import local_prediction
-    from libs.utilities import read_safetensors_header, get_gpu
+    from libs.utilities import get_gpu, enumerate_models
     from libs.vars import GRADIO_CUSTOM_PATH, GRADIO_MODELS_PATH, LORA_MODELS_PATH, schedulers
 except Exception as e:
     print(f"Caught exception: {e}")
@@ -42,9 +40,7 @@ class StableDiffusionUI(object):
     # model scraper
     def availableModelFiles(self, models_path=GRADIO_MODELS_PATH):
         try:
-            mp = Path(models_path)
-            files = mp.glob("**/*.safetensors")
-            return [os.path.basename(fullname) for fullname in files]
+            return enumerate_models(models_path)
         except Exception:
             raise gr.Error(f"Failed to list model safetensors from {models_path}", duration=5)
 
@@ -63,7 +59,7 @@ class StableDiffusionUI(object):
             return
         else:
             gr.Info(f"Loading model {model}", duration=5)
-            model = "/".join((GRADIO_MODELS_PATH, model))
+            model = self.availableModelFiles(GRADIO_MODELS_PATH).get(model)
 
         try:
             from diffusers import StableDiffusionPipeline
@@ -102,9 +98,9 @@ class StableDiffusionUI(object):
                     prompt = gr.Textbox(label="Prompt")
                     negative_prompt = gr.Textbox(label="Negative Prompt")
                     with gr.Row():
-                        with gr.Column():
-                            model_dropdown = gr.Dropdown(scale=2, min_width=300, multiselect=False, label="SD Model", choices=self.availableModelFiles())
-                            lora_dropdown = gr.Dropdown(scale=2, min_width=300, multiselect=True, label="LoRA", choices=self.availableModelFiles(models_path=LORA_MODELS_PATH))
+                        with gr.Column(scale=3):
+                            model_dropdown = gr.Dropdown(scale=3, min_width=400, multiselect=False, label="SD Model", choices=[i for i in self.availableModelFiles().keys()])
+                            lora_dropdown = gr.Dropdown(scale=3, min_width=400, multiselect=True, label="LoRA", choices=self.availableModelFiles(models_path=LORA_MODELS_PATH))
                         scheduler_dropdown = gr.Dropdown(scale=2, min_width=300, multiselect=False, label="Scheduler", choices=[i for i in schedulers.keys()])
                     with gr.Row():
                         submit_btn = gr.Button(value="Generate", variant="primary")
