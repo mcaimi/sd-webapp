@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 from diffusers.schedulers import (DPMSolverMultistepScheduler,
-                                 DPMSolverSinglestepScheduler,
-                                 EulerDiscreteScheduler,
-                                 EulerAncestralDiscreteScheduler,
-                                 KDPM2DiscreteScheduler,
-                                 HeunDiscreteScheduler,
-                                 LMSDiscreteScheduler)
+                                  DPMSolverSinglestepScheduler,
+                                  EulerDiscreteScheduler,
+                                  EulerAncestralDiscreteScheduler,
+                                  KDPM2DiscreteScheduler,
+                                  HeunDiscreteScheduler,
+                                  LMSDiscreteScheduler)
 
 # define globals
 GRADIO_CUSTOM_PATH = "/sdui"

@@ -98,14 +98,13 @@ class StableDiffusionUI(object):
         with gr.Blocks(theme=gr.themes.Soft()) as sdInterface:
             gr.HTML(value=self.html_component("assets/header.html"))
             with gr.Row():
-                model_dropdown = gr.Dropdown(scale=2, min_width=300, multiselect=False, label="SD Model", choices=self.availableModelFiles())
-                load_btn = gr.Button(value="Load Model", variant="primary")
-            with gr.Row():
                 with gr.Column():
                     prompt = gr.Textbox(label="Prompt")
                     negative_prompt = gr.Textbox(label="Negative Prompt")
                     with gr.Row():
-                        lora_dropdown = gr.Dropdown(scale=2, min_width=300, multiselect=True, label="LoRA", choices=self.availableModelFiles(models_path=LORA_MODELS_PATH))
+                        with gr.Column():
+                            model_dropdown = gr.Dropdown(scale=2, min_width=300, multiselect=False, label="SD Model", choices=self.availableModelFiles())
+                            lora_dropdown = gr.Dropdown(scale=2, min_width=300, multiselect=True, label="LoRA", choices=self.availableModelFiles(models_path=LORA_MODELS_PATH))
                         scheduler_dropdown = gr.Dropdown(scale=2, min_width=300, multiselect=False, label="Scheduler", choices=[i for i in schedulers.keys()])
                     with gr.Row():
                         submit_btn = gr.Button(value="Generate", variant="primary")
@@ -130,10 +129,9 @@ class StableDiffusionUI(object):
                             gr.Number(label=i, value=1.0)
 
             # attach function callbacks
-            submit_btn.click(fn=self.gen_callback, inputs=[prompt, negative_prompt, scheduler_dropdown, steps, width, height, cfg, seed], outputs=[output_image, json_out], api_name=False)
-            load_btn.click(fn=self.loadModel, inputs=[model_dropdown, lora_dropdown])
+            submit_btn.click(fn=self.gen_callback, inputs=[prompt, negative_prompt, scheduler_dropdown, steps, width, height, cfg, seed], outputs=[output_image, json_out], api_name="generateImage")
             clear_btn.add(components=[prompt, negative_prompt, steps, width, height, cfg, seed])
-            model_dropdown.input(fn=read_safetensors_header, inputs=[model_dropdown])
+            model_dropdown.input(fn=self.loadModel, inputs=[model_dropdown, lora_dropdown], api_name="loadModel")
 
         self.sd_ui = sdInterface
 

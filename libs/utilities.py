@@ -2,7 +2,7 @@
 
 import struct
 import json
-from .vars import GRADIO_MODELS_PATH, LORA_MODELS_PATH
+from .vars import GRADIO_MODELS_PATH
 
 SFT_HEADER_LEN = 8
 
