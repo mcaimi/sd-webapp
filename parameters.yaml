@@ -1,0 +1,12 @@
+---
+checkpoints:
+  sd15:
+    path: 'models/checkpoints/SD15'
+  sdxl:
+    path: 'models/checkpoints/SDXL'
+
+loras:
+  sd15:
+    path: 'models/loras/SD15'
+  sdxl:
+    path: 'models/loras/SDXL'
