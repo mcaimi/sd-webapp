@@ -1,20 +1,18 @@
 # Stable Diffusion Web App
 
-This is a Stable-Diffusion Web Application written using Gradio and FastAPI.
-It exposes a way to perform inference with a Stable Diffusion compatible model in the backend.
+This is a Stable-Diffusion Web Application written using Streamlit, Pytorch/Torchvision and HuggingFace Diffusers
+With proper hardware, it can generate images locally from pre-trained Stable Diffusion Models.
 
-![gradio_app](assets/gradio_app.png)
+To download model checkpoints, have a look at [HuggingFace](https://huggingface.co/models?pipeline_tag=text-to-image&library=safetensors&sort=trending).
+
+![app](assets/app.png)
 
 ## Run Locally
 
-The application expects to find model checkpoints files in the `models/stable-diffusion` folder.
+The application expects to find model checkpoints files in the `models/stable-diffusion` folder, and loras in `models/loras` folder.
 
-```bash
-# development mode
-$ fastapi dev
-
-# production mode
-$ fastapi run
+```
+$ uv run streamlit run main.py
 ```
 
 It tries to use any discovered GPU that is supported by pytorch, but it can run on CPU (*very* slowly)
