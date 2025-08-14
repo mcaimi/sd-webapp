@@ -1,6 +1,6 @@
 .DS_Store
 flagged
 __pycache__
-venv
+.venv
 models
 .python-version
