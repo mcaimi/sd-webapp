@@ -20,6 +20,11 @@ def build_header(api_key: str) -> dict:
     }
     return headers
 
+# ensure directory structure exists
+def check_or_create_path(targetpath: str) -> None:
+    if not os.path.isdir(targetpath):
+        os.makedirs(targetpath, exist_ok=True)
+
 # scrape model filenames from the filesystem
 def enumerate_models(path: str = DEFAULT_MODELS_PATH) -> dict:
     mp = Path(path)
@@ -36,7 +41,7 @@ def enumerate_models(path: str = DEFAULT_MODELS_PATH) -> dict:
 def read_safetensors_header(filename: str|PosixPath) -> str:
     try:
         if type(filename) == str:
-            fname = "/".join((DEFAULT_MODELS_PATH, filename))
+            fname = filename
         elif type(filename) == PosixPath:
             fname = filename.absolute()
         else:

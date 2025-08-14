@@ -3,10 +3,13 @@
 # load libs
 try:
     import numpy as np
+    from typing import Callable
     from torch import Generator
-    from diffusers import StableDiffusionPipeline
+    from transformers import CLIPTextModel, CLIPTokenizer
+    from diffusers import StableDiffusionPipeline, AutoencoderKL, UNet2DConditionModel
     from libs.globals.vars import RANDOM_BIT_LENGTH, schedulers
     from libs.shared.utils import get_gpu
+    from pathlib import PosixPath
     import random
 except Exception as e:
     print(f"Caught exception: {e}")
@@ -99,8 +102,8 @@ def local_prediction(model_pipeline,
     return np.array(prediction.images[0]), metadata
 
 # generate sample noise
-def noise_latent(width: int = 512, height: int = 512, channels: int = 3):
-    noise_latent = np.random.rand(width, height, channels)
+def gen_noise(width: int = 512, height: int = 512, channels: int = 3):
+    noise_image = np.random.rand(width, height, channels)
     noise_properties = {
         "width": width,
         "height": height,
@@ -110,17 +113,48 @@ def noise_latent(width: int = 512, height: int = 512, channels: int = 3):
             "output": "noise matrix",
         }
     }
-    return noise_latent, noise_properties
+    return noise_image, noise_properties
 
+# load custom UNET weights
+def load_custom_unet(ckpt: str|PosixPath) -> UNet2DConditionModel:
+    try:
+        if type(ckpt) == str:
+            fname = ckpt
+        elif type(ckpt) == PosixPath:
+            fname = ckpt.absolute()
+        else:
+            raise Exception("load_custom_unet(): filename must be a string or Path object")
+
+        # load the UNet Model from checkpoint
+        _unet = UNet2DConditionModel.from_single_file(ckpt, subfolder="unet", use_safetensors=True)
+        return _unet
+    except Exception as e:
+        raise(e)
+
+# load custom Variational Autoencoder
+def load_custom_vae(ckpt: str|PosixPath) -> AutoencoderKL:
+    try:
+        if type(ckpt) == str:
+            fname = ckpt
+        elif type(ckpt) == PosixPath:
+            fname = ckpt.absolute()
+        else:
+            raise Exception("load_custom_vae(): filename must be a string or Path object")
+
+        # load the vae from checkpoint
+        _vae = AutoencoderKL.from_single_file(ckpt, subfolder="vae", use_safetensors=True)
+        return _vae
+    except Exception as e:
+        raise(e)
 
 # SD1.5 Generator Class
-class SD15Generator():
+class SD15PipelineGenerator():
     def __init__(self, model_checkpoint: str):
         self.model_checkpoint = model_checkpoint
         self.sd_pipeline = None
 
     # generation callback
-    def gen_callback(self, positive_prompt, negative_prompt, scheduler_type, steps, width, height, cfg, seed):
+    def forward(self, positive_prompt, negative_prompt, scheduler_type, steps, width, height, cfg, seed):
         # check if model is ready
         if self.sd_pipeline is None:
             import numpy as np
@@ -139,25 +173,34 @@ class SD15Generator():
                                     scheduler=scheduler_type,
                                     accelerator=self.accelerator)
 
+    # return scheduler config
+    def getSchedulerConfig(self):
+        if self.sd_pipeline is not None:
+            return self.sd_pipeline.scheduler.config
+        else:
+            return None
+
     # load stable diffusion model from disk
-    def loadModel(self):
+    def loadSDPipeline(self):
         # check for GPU
         try:
             self.accelerator, self.dtype = get_gpu()
             self.sd_pipeline = StableDiffusionPipeline.from_single_file(self.model_checkpoint, torch_dtype=self.dtype, use_safetensors=True)
         except Exception as e:
-            raise gr.Error(f"Caught Exception {e}", duration=5)
-
-        # send model pipeline to the appropriate compute device
-        self.sd_pipeline.to(self.accelerator)
+            raise Exception(f"Caught Exception {e}", duration=5)
 
     # load lora adapters
-    def loadLoras(self, loras: list = None):
-        # add low rank adaptation weights
-        if lora is not None:
-            for weightsfile in lora:
-                print(f"Loading Lora: {lora}")
+    def addLorasToPipeline(self, loras: list = None):
+        # add low rank adapter weights
+        if loras is not None:
+            for weightsfile in loras:
+                print(f"Loading Lora: {weightsfile}")
                 if self.sd_pipeline is not None:
-                    self.sd_pipeline.load_lora_weights("/".join((LORA_MODELS_PATH, weightsfile)))
+                    self.sd_pipeline.load_lora_weights(weightsfile)
                 else:
                     raise Exception("SD Model is not loaded")
+
+    # send to accelerator
+    def pipeToConfiguredDevice(self):
+        # send model pipeline to the appropriate compute device
+        self.sd_pipeline.to(self.accelerator)

@@ -11,9 +11,9 @@ try:
         # local imports
         from libs.shared.settings import Properties
         from libs.shared.session import Session
-        from libs.shared.utils import enumerate_models, read_safetensors_header
-        from libs.stablediffusion.sd15 import noise_latent
-        from libs.stablediffusion.sd15 import SD15Generator
+        from libs.shared.utils import enumerate_models, read_safetensors_header, check_or_create_path
+        from libs.stablediffusion.sd15 import gen_noise
+        from libs.stablediffusion.sd15 import SD15PipelineGenerator
         from libs.globals.vars import schedulers
 except Exception as e:
     print(f"Caught fatal exception: {e}")
@@ -28,6 +28,12 @@ appSettings = Properties(config_file=config_filename)
 # load header
 st.html("assets/sd15_header.html")
 
+# paths sanity check
+with st.spinner("Checking Paths"):
+    for path in [ appSettings.config_parameters.checkpoints.sd15.path, appSettings.config_parameters.loras.sd15.path,
+                appSettings.config_parameters.checkpoints.sdxl.path, appSettings.config_parameters.loras.sdxl.path ]:
+        check_or_create_path(path)
+
 # reset object cache
 def reset_model_cache() -> None:
     st.cache_resource.clear()
@@ -35,7 +41,7 @@ def reset_model_cache() -> None:
 # load model and associated resources
 @st.cache_resource
 def load_sd15_model(requested_model):
-    return SD15Generator(model_checkpoint=requested_model)
+    return SD15PipelineGenerator(model_checkpoint=requested_model)
 
 # populate sidebar
 with st.sidebar:
@@ -64,10 +70,10 @@ with st.sidebar:
     for i, l in enumerate(selected_lora):
         lora_metadata[f"lora_{i}"] = {
             "name": l,
+            "lora_path": enumerate_models(appSettings.config_parameters.loras.sd15.path).get(l).absolute(),
             "metadata": read_safetensors_header(enumerate_models(appSettings.config_parameters.loras.sd15.path).get(l)),
         }
-        st.json(lora_metadata, expanded=False)
-
+    st.json(lora_metadata, expanded=False)
 
 # main page
 st.markdown("**Stable Diffusion Generation Page, v1.5**")
@@ -101,20 +107,27 @@ with settings.container():
         # load model..
         with st.spinner(f"Loading Stable Diffusion Model {model_metadata.get('model_checkpoint')}..."):
             sd_generator = load_sd15_model(model_metadata.get("model_path"))
-            sd_generator.loadModel()
+            sd_generator.loadSDPipeline()
+
+        with st.spinner(f"Merging LoRA Adapters..."):
+            sd_generator.addLorasToPipeline(loras=[lora_metadata[k].get("lora_path") for k in lora_metadata.keys()])
+        
+        with st.spinner(f"Moving pipeline to device: {sd_generator.accelerator}"):
+            sd_generator.pipeToConfiguredDevice()
         # run inference
         with st.spinner(f"Generating image ..."):
-            output_image, output_parameters = sd_generator.gen_callback(positive_prompt=positive_prompt,
+            output_image, output_parameters = sd_generator.forward(positive_prompt=positive_prompt,
                                                                         negative_prompt=negative_prompt,
                                                                         steps=inference_steps,
                                                                         scheduler_type=scheduler_type,
                                                                         width=width, height=height,
                                                                         seed=seed,
                                                                         cfg=guidance)
+            scheduler_config = sd_generator.getSchedulerConfig()
 
 # output section
 with image_output.container():
-    noise_image, noise_parameters = noise_latent(width=width, height=height)
+    noise_image, noise_parameters = gen_noise(width=width, height=height)
     # display image
     try:
         st.markdown("**Generated Image**")
@@ -141,7 +154,8 @@ with image_output.container():
         image_metadata = st.json({
             "model_name": model_metadata.get("model_checkpoint"),
             "lora_names": [lora_metadata.get(l)["name"] for l in lora_metadata],
-            "output_parameters": output_parameters
+            "output_parameters": output_parameters,
+            "scheduler_config": scheduler_config
         })
     except Exception as e:
         st.markdown(f"**Noise Placeholder** {e}")
