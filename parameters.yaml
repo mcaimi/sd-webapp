@@ -10,3 +10,9 @@ loras:
     path: 'models/loras/SD15'
   sdxl:
     path: 'models/loras/SDXL'
+
+vae:
+  sd15:
+    path: 'models/vae/SD15'
+  sdxl:
+    path: 'models/vae/SDXL'

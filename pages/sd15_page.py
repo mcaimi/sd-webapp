@@ -12,7 +12,7 @@ try:
         from libs.shared.settings import Properties
         from libs.shared.session import Session
         from libs.shared.utils import enumerate_models, read_safetensors_header, check_or_create_path
-        from libs.stablediffusion.sd15 import gen_noise
+        from libs.stablediffusion.sd15 import gen_noise, load_custom_vae
         from libs.stablediffusion.sd15 import SD15PipelineGenerator
         from libs.globals.vars import schedulers
 except Exception as e:
@@ -31,7 +31,8 @@ st.html("assets/sd15_header.html")
 # paths sanity check
 with st.spinner("Checking Paths"):
     for path in [ appSettings.config_parameters.checkpoints.sd15.path, appSettings.config_parameters.loras.sd15.path,
-                appSettings.config_parameters.checkpoints.sdxl.path, appSettings.config_parameters.loras.sdxl.path ]:
+                appSettings.config_parameters.checkpoints.sdxl.path, appSettings.config_parameters.loras.sdxl.path,
+                appSettings.config_parameters.vae.sdxl.path, appSettings.config_parameters.vae.sd15.path ]:
         check_or_create_path(path)
 
 # reset object cache
@@ -66,14 +67,32 @@ with st.sidebar:
                                 max_selections=5, default=[], on_change=reset_model_cache)
 
     # show lora metadata
-    lora_metadata = {}
-    for i, l in enumerate(selected_lora):
-        lora_metadata[f"lora_{i}"] = {
-            "name": l,
-            "lora_path": enumerate_models(appSettings.config_parameters.loras.sd15.path).get(l).absolute(),
-            "metadata": read_safetensors_header(enumerate_models(appSettings.config_parameters.loras.sd15.path).get(l)),
-        }
-    st.json(lora_metadata, expanded=False)
+    with st.spinner("Loading Lora Metadata...."):
+        lora_metadata = {}
+        for i, l in enumerate(selected_lora):
+            lora_metadata[f"lora_{i}"] = {
+                "name": l,
+                "lora_path": enumerate_models(appSettings.config_parameters.loras.sd15.path).get(l).absolute(),
+                "metadata": read_safetensors_header(enumerate_models(appSettings.config_parameters.loras.sd15.path).get(l)),
+            }
+        st.json(lora_metadata, expanded=False)
+
+     # select vae
+    override_vae = st.checkbox("Override VAE", value=False, on_change=reset_model_cache)
+    if override_vae:
+        selected_vae = st.selectbox(label="Select SD15 VAE",
+                                    options=enumerate_models(appSettings.config_parameters.vae.sd15.path).keys(),
+                                    index=0,
+                                    on_change=reset_model_cache)
+
+        # show model metadata
+        with st.spinner("Loading VAE Metadata...."):
+            vae_metadata = {
+                "vae_checkpoint": selected_vae,
+                "vae_path": enumerate_models(appSettings.config_parameters.vae.sd15.path).get(selected_vae).absolute(),
+                "metadata": read_safetensors_header(enumerate_models(appSettings.config_parameters.vae.sd15.path).get(selected_vae))
+            }
+            st.json(vae_metadata, expanded=False)
 
 # main page
 st.markdown("**Stable Diffusion Generation Page, v1.5**")
@@ -112,8 +131,13 @@ with settings.container():
         with st.spinner(f"Merging LoRA Adapters..."):
             sd_generator.addLorasToPipeline(loras=[lora_metadata[k].get("lora_path") for k in lora_metadata.keys()])
         
+        if override_vae:
+            with st.spinner(f"Loading VAE {vae_metadata.get('vae_path')}..."):
+                sd_generator.vae = load_custom_vae(vae_metadata.get("vae_path"))
+        
         with st.spinner(f"Moving pipeline to device: {sd_generator.accelerator}"):
             sd_generator.pipeToConfiguredDevice()
+
         # run inference
         with st.spinner(f"Generating image ..."):
             output_image, output_parameters = sd_generator.forward(positive_prompt=positive_prompt,

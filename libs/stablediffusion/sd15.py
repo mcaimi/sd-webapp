@@ -142,6 +142,7 @@ def load_custom_vae(ckpt: str|PosixPath) -> AutoencoderKL:
             raise Exception("load_custom_vae(): filename must be a string or Path object")
 
         # load the vae from checkpoint
+        print(f"Loading custom VAE {ckpt}")
         _vae = AutoencoderKL.from_single_file(ckpt, subfolder="vae", use_safetensors=True)
         return _vae
     except Exception as e:
@@ -185,6 +186,7 @@ class SD15PipelineGenerator():
         # check for GPU
         try:
             self.accelerator, self.dtype = get_gpu()
+            print(f"Loading SD Checkpoint {self.model_checkpoint}")
             self.sd_pipeline = StableDiffusionPipeline.from_single_file(self.model_checkpoint, torch_dtype=self.dtype, use_safetensors=True)
         except Exception as e:
             raise Exception(f"Caught Exception {e}", duration=5)
