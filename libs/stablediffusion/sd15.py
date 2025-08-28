@@ -3,9 +3,7 @@
 # load libs
 try:
     import numpy as np
-    from typing import Callable
     from torch import Generator
-    from transformers import CLIPTextModel, CLIPTokenizer
     from diffusers import StableDiffusionPipeline, AutoencoderKL, UNet2DConditionModel
     from libs.globals.vars import RANDOM_BIT_LENGTH, schedulers
     from libs.shared.utils import get_gpu
@@ -32,13 +30,18 @@ except Exception as e:
 #    ]
 #  }
 
+
 # prepare the payload
-def format_metadata(prompt,
-                    negative_prompt="",
-                    steps=10,
-                    width=512, height=512,
-                    cfg=7,
-                    seed=-1, scheduler=None):
+def format_metadata(
+    prompt,
+    negative_prompt="",
+    steps=10,
+    width=512,
+    height=512,
+    cfg=7,
+    seed=-1,
+    scheduler=None,
+):
     # prepare seed
     if seed == -1:
         custom_seed = random.getrandbits(RANDOM_BIT_LENGTH)
@@ -68,15 +71,18 @@ def format_metadata(prompt,
 
 
 # callback for sd generation on a local machine
-def local_prediction(model_pipeline,
-                     prompt,
-                     negative_prompt="",
-                     steps=10,
-                     width=512, height=512,
-                     guidance_scale=7,
-                     seed=-1,
-                     scheduler=None,
-                     accelerator="cpu"):
+def local_prediction(
+    model_pipeline,
+    prompt,
+    negative_prompt="",
+    steps=10,
+    width=512,
+    height=512,
+    guidance_scale=7,
+    seed=-1,
+    scheduler=None,
+    accelerator="cpu",
+):
     # prepare generator object
     if seed == -1:
         gen = Generator(accelerator).manual_seed(random.getrandbits(RANDOM_BIT_LENGTH))
@@ -84,22 +90,30 @@ def local_prediction(model_pipeline,
         gen = Generator(accelerator).manual_seed(seed)
 
     # generate image from prompt
-    prediction = model_pipeline(prompt=prompt,
-                                negative_prompt=negative_prompt,
-                                num_inference_steps=steps,
-                                width=width,
-                                height=height,
-                                guidance_scale=guidance_scale,
-                                generator=gen)
+    prediction = model_pipeline(
+        prompt=prompt,
+        negative_prompt=negative_prompt,
+        num_inference_steps=steps,
+        width=width,
+        height=height,
+        guidance_scale=guidance_scale,
+        generator=gen,
+    )
 
     # generation metagada payload
-    metadata = format_metadata(prompt=prompt,
-                               negative_prompt=negative_prompt,
-                               steps=steps, width=width, height=height,
-                               cfg=guidance_scale, seed=seed,
-                               scheduler=scheduler)
+    metadata = format_metadata(
+        prompt=prompt,
+        negative_prompt=negative_prompt,
+        steps=steps,
+        width=width,
+        height=height,
+        cfg=guidance_scale,
+        seed=seed,
+        scheduler=scheduler,
+    )
 
     return np.array(prediction.images[0]), metadata
+
 
 # generate sample noise
 def gen_noise(width: int = 512, height: int = 512, channels: int = 3):
@@ -111,68 +125,97 @@ def gen_noise(width: int = 512, height: int = 512, channels: int = 3):
         "generation": {
             "status": "idle",
             "output": "noise matrix",
-        }
+        },
     }
     return noise_image, noise_properties
 
+
 # load custom UNET weights
-def load_custom_unet(ckpt: str|PosixPath) -> UNet2DConditionModel:
+def load_custom_unet(ckpt: str | PosixPath) -> UNet2DConditionModel:
     try:
         if type(ckpt) == str:
             fname = ckpt
         elif type(ckpt) == PosixPath:
             fname = ckpt.absolute()
         else:
-            raise Exception("load_custom_unet(): filename must be a string or Path object")
+            raise Exception(
+                "load_custom_unet(): filename must be a string or Path object"
+            )
 
         # load the UNet Model from checkpoint
-        _unet = UNet2DConditionModel.from_single_file(ckpt, subfolder="unet", use_safetensors=True)
+        _unet = UNet2DConditionModel.from_single_file(
+            ckpt, subfolder="unet", use_safetensors=True
+        )
         return _unet
     except Exception as e:
-        raise(e)
+        raise (e)
+
 
 # load custom Variational Autoencoder
-def load_custom_vae(ckpt: str|PosixPath) -> AutoencoderKL:
+def load_custom_vae(ckpt: str | PosixPath) -> AutoencoderKL:
     try:
         if type(ckpt) == str:
             fname = ckpt
         elif type(ckpt) == PosixPath:
             fname = ckpt.absolute()
         else:
-            raise Exception("load_custom_vae(): filename must be a string or Path object")
+            raise Exception(
+                "load_custom_vae(): filename must be a string or Path object"
+            )
 
         # load the vae from checkpoint
         print(f"Loading custom VAE {ckpt}")
-        _vae = AutoencoderKL.from_single_file(ckpt, subfolder="vae", use_safetensors=True)
+        _vae = AutoencoderKL.from_single_file(
+            ckpt, subfolder="vae", use_safetensors=True
+        )
         return _vae
     except Exception as e:
-        raise(e)
+        raise (e)
+
 
 # SD1.5 Generator Class
-class SD15PipelineGenerator():
+class SD15PipelineGenerator:
     def __init__(self, model_checkpoint: str):
         self.model_checkpoint = model_checkpoint
         self.sd_pipeline = None
 
     # generation callback
-    def forward(self, positive_prompt, negative_prompt, scheduler_type, steps, width, height, cfg, seed):
+    def forward(
+        self,
+        positive_prompt,
+        negative_prompt,
+        scheduler_type,
+        steps,
+        width,
+        height,
+        cfg,
+        seed,
+    ):
         # check if model is ready
         if self.sd_pipeline is None:
             import numpy as np
-            return np.random.rand(width, height, 3), {"generation": {"status": "no model loaded", "output": "noise matrix"}}
+
+            return np.random.rand(width, height, 3), {
+                "generation": {"status": "no model loaded", "output": "noise matrix"}
+            }
         else:
             # call local callback function
             print(f"Using Scheduler {scheduler_type}")
-            self.sd_pipeline.scheduler = schedulers.get(scheduler_type).from_config(self.sd_pipeline.scheduler.config)
-            return local_prediction(self.sd_pipeline,
-                                    prompt=positive_prompt,
-                                    negative_prompt=negative_prompt,
-                                    steps=steps,
-                                    width=width, height=height,
-                                    seed=seed,
-                                    guidance_scale=cfg,
-                                    scheduler=scheduler_type,
-                                    accelerator=self.accelerator)
+            self.sd_pipeline.scheduler = schedulers.get(scheduler_type).from_config(
+                self.sd_pipeline.scheduler.config
+            )
+            return local_prediction(
+                self.sd_pipeline,
+                prompt=positive_prompt,
+                negative_prompt=negative_prompt,
+                steps=steps,
+                width=width,
+                height=height,
+                seed=seed,
+                guidance_scale=cfg,
+                scheduler=scheduler_type,
+                accelerator=self.accelerator,
+            )
 
     # return scheduler config
     def getSchedulerConfig(self):
@@ -187,18 +230,35 @@ class SD15PipelineGenerator():
         try:
             self.accelerator, self.dtype = get_gpu()
             print(f"Loading SD Checkpoint {self.model_checkpoint}")
-            self.sd_pipeline = StableDiffusionPipeline.from_single_file(self.model_checkpoint, torch_dtype=self.dtype, use_safetensors=True)
+            self.sd_pipeline = StableDiffusionPipeline.from_single_file(
+                self.model_checkpoint, torch_dtype=self.dtype, use_safetensors=True
+            )
         except Exception as e:
             raise Exception(f"Caught Exception {e}", duration=5)
 
     # load lora adapters
-    def addLorasToPipeline(self, loras: list = None):
+    def addLorasToPipeline(self, loras: dict = None):
+        assert loras is not None
+
+        # extract checkpoint files
+        lora_checkpoints = [loras[k] for k in loras.keys()]
+
         # add low rank adapter weights
-        if loras is not None:
-            for weightsfile in loras:
-                print(f"Loading Lora: {weightsfile}")
+        if lora_checkpoints is not None:
+            for entry in lora_checkpoints:
+                weightsfile = PosixPath(entry.get("lora_path"))
+                strength = entry.get("merge_strength")
+                print(f"Loading Lora: {weightsfile}, fusion strength: {strength}")
                 if self.sd_pipeline is not None:
-                    self.sd_pipeline.load_lora_weights(weightsfile)
+                    self.sd_pipeline.load_lora_weights(
+                        weightsfile,
+                        adapter_name=f"name_{weightsfile.name.split('.')[0]}",
+                    )
+                    # merge lora
+                    self.sd_pipeline.fuse_lora(
+                        lora_scale=strength,
+                        adapter_name=f"name_{weightsfile.name.split('.')[0]}",
+                    )
                 else:
                     raise Exception("SD Model is not loaded")
 
