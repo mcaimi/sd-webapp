@@ -31,8 +31,9 @@ if __name__ == "__main__":
 
     # define app pages
     sd15_page = st.Page("pages/sd15_page.py", title="Stable Diffusion 1.5", icon=":material/chat:")
-    enabled_sections = [sd15_page]
-    
+    explore_page = st.Page("pages/explore_page.py", title="Checkpoint Explorer", icon=":material/settings:")
+    enabled_sections = [sd15_page, explore_page]
+
     # setup application main page
     pg = st.navigation(enabled_sections)
     st.set_page_config(page_title="Red Hat Opensource AI", layout="wide", page_icon=":material/edit:")
