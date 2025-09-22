@@ -133,9 +133,9 @@ def gen_noise(width: int = 512, height: int = 512, channels: int = 3):
 # load custom UNET weights
 def load_custom_unet(ckpt: str | PosixPath) -> UNet2DConditionModel:
     try:
-        if type(ckpt) == str:
+        if type(ckpt) is str:
             fname = ckpt
-        elif type(ckpt) == PosixPath:
+        elif type(ckpt) is PosixPath:
             fname = ckpt.absolute()
         else:
             raise Exception(
@@ -144,7 +144,7 @@ def load_custom_unet(ckpt: str | PosixPath) -> UNet2DConditionModel:
 
         # load the UNet Model from checkpoint
         _unet = UNet2DConditionModel.from_single_file(
-            ckpt, subfolder="unet", use_safetensors=True
+            fname, subfolder="unet", use_safetensors=True
         )
         return _unet
     except Exception as e:
@@ -154,9 +154,9 @@ def load_custom_unet(ckpt: str | PosixPath) -> UNet2DConditionModel:
 # load custom Variational Autoencoder
 def load_custom_vae(ckpt: str | PosixPath) -> AutoencoderKL:
     try:
-        if type(ckpt) == str:
+        if type(ckpt) is str:
             fname = ckpt
-        elif type(ckpt) == PosixPath:
+        elif type(ckpt) is PosixPath:
             fname = ckpt.absolute()
         else:
             raise Exception(
@@ -166,7 +166,7 @@ def load_custom_vae(ckpt: str | PosixPath) -> AutoencoderKL:
         # load the vae from checkpoint
         print(f"Loading custom VAE {ckpt}")
         _vae = AutoencoderKL.from_single_file(
-            ckpt, subfolder="vae", use_safetensors=True
+            fname, subfolder="vae", use_safetensors=True
         )
         return _vae
     except Exception as e:
@@ -266,3 +266,12 @@ class SD15PipelineGenerator:
     def pipeToConfiguredDevice(self):
         # send model pipeline to the appropriate compute device
         self.sd_pipeline.to(self.accelerator)
+
+    # get common SD15 resolutions
+    @staticmethod
+    def get_sd15_resolutions():
+        return {
+            "512x512": (512, 512),
+            "512x768": (512, 768),
+            "768x512": (768, 512),
+        }
