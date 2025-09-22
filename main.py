@@ -30,13 +30,22 @@ if __name__ == "__main__":
     st.logo("assets/redhat.png")
 
     # define app pages
-    sd15_page = st.Page("pages/sd15_page.py", title="Stable Diffusion 1.5", icon=":material/chat:")
-    explore_page = st.Page("pages/explore_page.py", title="Checkpoint Explorer", icon=":material/settings:")
-    enabled_sections = [sd15_page, explore_page]
+    sd15_page = st.Page(
+        "pages/sd15_page.py", title="Stable Diffusion 1.5", icon=":material/chat:"
+    )
+    sdxl_page = st.Page(
+        "pages/sdxl_page.py", title="Stable Diffusion XL", icon=":material/chat:"
+    )
+    explore_page = st.Page(
+        "pages/explore_page.py", title="Checkpoint Explorer", icon=":material/settings:"
+    )
+    enabled_sections = [sd15_page, sdxl_page, explore_page]
 
     # setup application main page
     pg = st.navigation(enabled_sections)
-    st.set_page_config(page_title="Red Hat Opensource AI", layout="wide", page_icon=":material/edit:")
+    st.set_page_config(
+        page_title="Red Hat Opensource AI", layout="wide", page_icon=":material/edit:"
+    )
 
     # run app
     pg.run()
