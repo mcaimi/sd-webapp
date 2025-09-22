@@ -128,26 +128,27 @@ with sd15_merger:
     if save_output:
         output_name = toolbox.text_input("Merged Checkpoint Name", value="merge_output.safetensors")
 
-    test_resulting_checkpoint = toolbox.checkbox("Compare Checkpoints after Merge", value=False)
-
     # merge button
     alpha = merge_controls.text_input("Alpha", value=0.5)
     do_merge = merge_controls.button("Merge Checkpoints", type="primary", disabled=(not can_merge))
 
     # merge!
     if do_merge:
+        ckpt_a = enumerate_models(appSettings.config_parameters.checkpoints.sd15.path).get(selected_checkpoint_a)
+        ckpt_b = enumerate_models(appSettings.config_parameters.checkpoints.sd15.path).get(selected_checkpoint_b)
+
         with st.spinner(f"Loading Checkpoint {selected_checkpoint_a}"):
-            a = load_checkpoint_dict(PosixPath(enumerate_models(appSettings.config_parameters.checkpoints.sd15.path).get(selected_checkpoint_a)))
+            a = load_checkpoint_dict(PosixPath(ckpt_a))
         
         with st.spinner(f"Loading Checkpoint {selected_checkpoint_b}"):
-            b = load_checkpoint_dict(PosixPath(enumerate_models(appSettings.config_parameters.checkpoints.sd15.path).get(selected_checkpoint_b)))
+            b = load_checkpoint_dict(PosixPath(ckpt_b))
 
         with st.spinner("Merging..."):
-            merged_checkpoint = merge_checkpoints_linear(a,b,alpha)
+            merged_checkpoint = merge_checkpoints_linear(a, b, alpha)
 
         # save resulting checkpoint
         if save_output:
             with st.spinner("Saving file..."):
                 out = save_checkpoint(merged_checkpoint, "/".join((appSettings.config_parameters.checkpoints.sd15.path, output_name)))
                 if out:
-                    st.success(f"Checkpoint {output_name} saved.")        
+                    st.success(f"Checkpoint {output_name} saved.")
