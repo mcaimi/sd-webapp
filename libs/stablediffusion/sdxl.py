@@ -144,7 +144,7 @@ def load_custom_unet(ckpt: str | PosixPath) -> UNet2DConditionModel:
 
         # load the UNet Model from checkpoint
         _unet = UNet2DConditionModel.from_single_file(
-            ckpt, subfolder="unet", use_safetensors=True
+            fname, subfolder="unet", use_safetensors=True
         )
         return _unet
     except Exception as e:
@@ -166,7 +166,7 @@ def load_custom_vae(ckpt: str | PosixPath) -> AutoencoderKL:
         # load the vae from checkpoint
         print(f"Loading custom VAE {ckpt}")
         _vae = AutoencoderKL.from_single_file(
-            ckpt, subfolder="vae", use_safetensors=True
+            fname, subfolder="vae", use_safetensors=True
         )
         return _vae
     except Exception as e:
