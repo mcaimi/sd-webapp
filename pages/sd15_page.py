@@ -10,7 +10,6 @@ try:
     with st.spinner("** LOADING INTERFACE... **"):
         # local imports
         from libs.shared.settings import Properties
-        from libs.shared.session import Session
         from libs.shared.utils import (
             enumerate_models,
             read_safetensors_header,

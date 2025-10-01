@@ -37,7 +37,7 @@ if __name__ == "__main__":
         "pages/sdxl_page.py", title="Stable Diffusion XL", icon=":material/chat:"
     )
     explore_page = st.Page(
-        "pages/explore_page.py", title="Checkpoint Explorer", icon=":material/settings:"
+        "pages/sd15_tools_page.py", title="SD15 Checkpoint Tools", icon=":material/settings:"
     )
     enabled_sections = [sd15_page, sdxl_page, explore_page]
 
