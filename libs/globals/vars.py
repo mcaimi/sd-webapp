@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from enum import Enum
 
 # load schedulers
 from diffusers.schedulers import (DPMSolverMultistepScheduler,
@@ -24,3 +25,10 @@ schedulers = {"DPM++ 2M": DPMSolverMultistepScheduler,
               "Heun": HeunDiscreteScheduler,
               "LMS": LMSDiscreteScheduler}
 
+class MergeMethod(Enum):
+    """Enumeration of available merge methods"""
+
+    LINEAR = "linear"
+    SLERP = "slerp"
+    ADDITIVE = "additive"
+    SUBTRACT = "subtract"
