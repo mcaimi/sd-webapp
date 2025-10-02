@@ -138,10 +138,7 @@ def merge_checkpoints(
 
         # Additional arguments for some merge methods
         merge_kwargs = {}
-        if (
-            config.method in [MergeMethod.ADDITIVE, MergeMethod.SUBTRACT]
-            and base_reference
-        ):
+        if ((config.method in [MergeMethod.ADDITIVE, MergeMethod.SUBTRACT]) and base_reference):
             merge_kwargs["base_tensor"] = base_reference[key]
 
         # Perform merge
