@@ -15,9 +15,13 @@ try:
             read_safetensors_header,
             check_or_create_path,
         )
-        from libs.stablediffusion.sd15 import gen_noise, load_custom_vae
-        from libs.stablediffusion.sd15 import SD15PipelineGenerator
-        from libs.globals.vars import schedulers
+        from libs.stablediffusion.sd15 import (
+            gen_noise,
+            load_custom_vae,
+            SD15PipelineGenerator,
+        )
+        from libs.globals.vars import schedulers, RANDOM_BIT_LENGTH
+        from libs.stablediffusion.funcs import get_random_seed
 except Exception as e:
     print(f"Caught fatal exception: {e}")
 
@@ -146,41 +150,58 @@ with st.sidebar:
             }
 
 # main page
-st.markdown("**Stable Diffusion Generation Page, v1.5**")
+st.markdown("### **Stable Diffusion Generation Page, v1.5**")
+st.markdown("*Generate images using Stable Diffusion 1.5 models.*")
 
-# left -> settings, right -> generated image
-# split page into two columns
-settings, image_output = st.columns([3, 1])
+# common features
+# image generate
+# align text prompts on the left
+positive_prompt = st.text_area(
+    "Positive Prompt", placeholder="Write here what you want in the image"
+)
+negative_prompt = st.text_area(
+    "Negative Prompt", placeholder="Write here what you don't want in the image"
+)
 
-# input section
-with settings.container():
-    # align text prompts on the left
-    positive_prompt = st.text_area(
-        "Positive Prompt", placeholder="Write here what you want in the image"
+# settings section
+with st.expander("Generation Settings..."):
+    guidance = st.slider(
+        "Guidance Scale", value=7.0, min_value=0.0, max_value=50.0, step=0.1
     )
-    negative_prompt = st.text_area(
-        "Negative Prompt", placeholder="Write here what you don't want in the image"
-    )
-    submit_button = st.button("Generate", type="primary")
+    with st.container(border=True):
+        w, h = st.columns([1, 1])
+        width = w.number_input("Image Width", value=512)
+        height = h.number_input("Image Height", value=768)
 
-    # settings section
-    with st.expander("Generation Settings..."):
-        guidance = st.slider(
-            "Guidance Scale", value=7.0, min_value=0.0, max_value=50.0, step=0.1
+    inference_steps = st.number_input("Inference Steps", value=20)
+
+    with st.container(border=True):
+        batch_size = st.number_input("Batch Size", min_value=1, value=1)
+
+    with st.container(border=True):
+        sched, seedbox = st.columns([1, 1])
+        scheduler_type = sched.selectbox("Noise Scheduler", options=schedulers, index=0)
+        seed = seedbox.number_input(
+            "Random Seed",
+            min_value=-1,
+            max_value=None,
+            step=1,
+            help="Generation Seed. -1 Means Random Seed",
         )
-        with st.container(border=True):
-            w, h = st.columns([1, 1])
-            width = w.number_input("Image Width", value=512)
-            height = h.number_input("Image Height", value=768)
-        inference_steps = st.number_input("Inference Steps", value=20)
-        with st.container(border=True):
-            sched, seedbox = st.columns([1, 1])
-            scheduler_type = sched.selectbox(
-                "Noise Scheduler", options=schedulers, index=0
-            )
-            seed = seedbox.number_input(
-                "Random Seed", min_value=-1, max_value=None, step=1
-            )
+
+# application tabs
+image_gen_tab, model_comparison_tab = st.tabs(["Image Generation", "Model Comparison"])
+
+with image_gen_tab:
+    gen_info_col, gen_btn_col = st.columns([2, 1])
+
+    with gen_info_col:
+        st.markdown(
+            f"**Generate Images using model {model_metadata.get('model_checkpoint')}**."
+        )
+
+    with gen_btn_col:
+        submit_button = st.button("Generate", type="primary")
 
     # generate new image
     if submit_button:
@@ -202,65 +223,149 @@ with settings.container():
             sd_generator.pipeToConfiguredDevice()
 
         # run inference
-        with st.spinner(f"Generating image ..."):
-            output_image, output_parameters = sd_generator.forward(
-                positive_prompt=positive_prompt,
-                negative_prompt=negative_prompt,
-                steps=inference_steps,
-                scheduler_type=scheduler_type,
-                width=width,
-                height=height,
-                seed=seed,
-                cfg=guidance,
+        generated_pixmaps = []
+        if (batch_size > 1) and (seed > 0):
+            st.warning(
+                f"Seed {seed} is constant and batch size is: {batch_size}: Images will be all the same..."
             )
-            scheduler_config = sd_generator.getSchedulerConfig()
+
+        for i in range(batch_size):
+            # get seed
+            gen_seed = seed if (seed > 0) else get_random_seed(RANDOM_BIT_LENGTH)
+            # generate
+            with st.spinner(f"Generating image ... {i + 1}/{batch_size}"):
+                output_image, output_parameters = sd_generator.forward(
+                    positive_prompt=positive_prompt,
+                    negative_prompt=negative_prompt,
+                    steps=inference_steps,
+                    scheduler_type=scheduler_type,
+                    width=width,
+                    height=height,
+                    seed=gen_seed,
+                    cfg=guidance,
+                )
+                scheduler_config = sd_generator.getSchedulerConfig()
+            # append image to list
+            generated_pixmaps.append(
+                (output_image, output_parameters, scheduler_config, gen_seed)
+            )
+
+with model_comparison_tab:
+    comp_info_col, comp_btn_col = st.columns([2, 1])
+
+    with comp_info_col:
+        st.markdown(
+            f"**Generate images with consistent parameters across selected models.**"
+        )
+        # multiple models selection
+        target_models = st.multiselect(
+            label="Select target models",
+            max_selections=6,
+            help="Generate image using the same settings across different models to compare checkpoints",
+            options=enumerate_models(
+                appSettings.config_parameters.checkpoints.sd15.path
+            ),
+            default=[],
+        )
+
+    with comp_btn_col:
+        gen_button = st.button(
+            "Generate over Models", type="primary", disabled=(len(target_models) == 0)
+        )
+
+    if gen_button:
+        # images holder
+        generated_pixmaps = []
+        # generate seed
+        gen_seed = seed if (seed > 0) else get_random_seed(RANDOM_BIT_LENGTH)
+
+        # iterate over models
+        for i, model in enumerate(target_models):
+            # set model name
+            model_metadata["model_checkpoint"] = model
+            ckpt = enumerate_models(
+                appSettings.config_parameters.checkpoints.sd15.path
+            ).get(model)
+            pipeline = load_sd15_model(ckpt.absolute())
+            pipeline.loadSDPipeline()
+
+            with st.spinner(f"Merging LoRA Adapters..."):
+                pipeline.addLorasToPipeline(loras=lora_metadata)
+
+            if override_vae:
+                with st.spinner(f"Loading VAE {vae_metadata.get('vae_path')}..."):
+                    pipeline.vae = load_custom_vae(vae_metadata.get("vae_path"))
+
+            with st.spinner(f"Moving pipeline to device: {pipeline.accelerator}"):
+                pipeline.pipeToConfiguredDevice()
+
+            with st.spinner(f"Generating image ... {i + 1} with {model}"):
+                output_image, output_parameters = pipeline.forward(
+                    positive_prompt=positive_prompt,
+                    negative_prompt=negative_prompt,
+                    steps=inference_steps,
+                    scheduler_type=scheduler_type,
+                    width=width,
+                    height=height,
+                    seed=gen_seed,
+                    cfg=guidance,
+                )
+                scheduler_config = pipeline.getSchedulerConfig()
+            # append image to list
+            generated_pixmaps.append(
+                (output_image, output_parameters, scheduler_config, gen_seed)
+            )
+            reset_model_cache()
 
 # output section
-with image_output.container():
-    noise_image, noise_parameters = gen_noise(width=width, height=height)
-    # display image
-    try:
-        st.markdown("**Generated Image**")
-        image_bytes = st.image(output_image, output_format="PNG")
-
-        # save image
-        from io import BytesIO
-        from torchvision import transforms as tvT
-
-        # ndarray -> image
-        pil_img = tvT.ToPILImage()
-        # image -> png byte stream
-        png_bytes = BytesIO()
-        pil_img(output_image).save(png_bytes, format="PNG")
-
-        st.download_button(
-            label="Download Image",
-            data=png_bytes.getvalue(),
-            type="primary",
-            file_name=f"sd15_{seed}.png",
-            icon=":material/download:",
+try:
+    if len(generated_pixmaps) > 0:
+        st.success(
+            f"Generation success! Inference produced {len(generated_pixmaps)} images:"
         )
+        with st.container():
+            for element in generated_pixmaps:
+                # get image data
+                output_image, output_parameters, scheduler_config, gen_seed = element
 
-        # display recap on the right
-        st.markdown("**Generation Parameters**")
-        image_metadata = st.json(
-            {
-                "model_name": model_metadata.get("model_checkpoint"),
-                "lora_names": [lora_metadata.get(l)["name"] for l in lora_metadata],
-                "output_parameters": output_parameters,
-                "scheduler_config": scheduler_config,
-            }
-        )
-    except Exception as e:
-        st.markdown(f"**Noise Placeholder** {e}")
-        image_bytes = st.image(noise_image)
-        # display recap on the right
-        st.markdown("**Noise Parameters**")
-        image_metadata = st.json(
-            {
-                "model_name": model_metadata.get("model_checkpoint"),
-                "lora_names": [lora_metadata.get(l)["name"] for l in lora_metadata],
-                "output_parameters": noise_parameters,
-            },
-            expanded=False,
-        )
+                # display results
+                img_out, parms_out, dwl_btn = st.columns(
+                    [1, 2, 1], border=True, vertical_alignment="center"
+                )
+
+                with img_out:
+                    image_bytes = st.image(output_image, output_format="PNG")
+                with parms_out:
+                    st.json(
+                        {
+                            "model_name": model_metadata.get("model_checkpoint"),
+                            "lora_names": [
+                                lora_metadata.get(l)["name"] for l in lora_metadata
+                            ],
+                            "output_parameters": output_parameters,
+                            "scheduler_config": scheduler_config,
+                        },
+                        expanded=False,
+                    )
+                with dwl_btn:
+                    # save image
+                    from io import BytesIO
+                    from torchvision import transforms as tvT
+
+                    # ndarray -> image
+                    pil_img = tvT.ToPILImage()
+                    # image -> png byte stream
+                    png_bytes = BytesIO()
+                    pil_img(output_image).save(png_bytes, format="PNG")
+
+                    st.download_button(
+                        label="Download Image",
+                        data=png_bytes.getvalue(),
+                        type="primary",
+                        file_name=f"sd15_{gen_seed}.png",
+                        icon=":material/download:",
+                        key=get_random_seed(), # needed to avoid duplicate errors in streamlit
+                    )
+except NameError as e:
+    st.info("Select generation method and perform inference.")
+
