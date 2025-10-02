@@ -7,8 +7,8 @@ try:
     from diffusers import StableDiffusionPipeline, AutoencoderKL, UNet2DConditionModel
     from libs.globals.vars import RANDOM_BIT_LENGTH, schedulers
     from libs.shared.utils import get_gpu
+    from libs.stablediffusion.funcs import get_random_seed
     from pathlib import PosixPath
-    import random
 except Exception as e:
     print(f"Caught exception: {e}")
     raise e
@@ -44,7 +44,7 @@ def format_metadata(
 ):
     # prepare seed
     if seed == -1:
-        custom_seed = random.getrandbits(RANDOM_BIT_LENGTH)
+        custom_seed = get_random_seed(RANDOM_BIT_LENGTH)
         print(f"Generating with random seed: {custom_seed}")
     else:
         custom_seed = seed
@@ -85,7 +85,7 @@ def local_prediction(
 ):
     # prepare generator object
     if seed == -1:
-        gen = Generator(accelerator).manual_seed(random.getrandbits(RANDOM_BIT_LENGTH))
+        gen = Generator(accelerator).manual_seed(get_random_seed(RANDOM_BIT_LENGTH))
     else:
         gen = Generator(accelerator).manual_seed(seed)
 

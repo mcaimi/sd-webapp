@@ -11,10 +11,15 @@
 try:
     import torch
     import torch.nn.functional as F
-    from libs.globals.vars import MergeMethod
+    from libs.globals.vars import MergeMethod, RANDOM_BIT_LENGTH
     from libs.shared.exceptions import MergeError
+    import random
 except Exception as e:
     print(f"funcs.py: Raised Exception: {e}")
+
+# get random seed
+def get_random_seed(seed_len: int = RANDOM_BIT_LENGTH) -> int:
+    return random.getrandbits(seed_len)
 
 # spherical interpolation function
 def slerp(t0: torch.Tensor, t1: torch.Tensor, alpha: float) -> torch.Tensor:
