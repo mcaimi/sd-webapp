@@ -36,15 +36,22 @@ if __name__ == "__main__":
     sdxl_page = st.Page(
         "pages/sdxl_page.py", title="Stable Diffusion XL", icon=":material/chat:"
     )
-    explore_page = st.Page(
-        "pages/sd15_tools_page.py", title="SD15 Checkpoint Tools", icon=":material/settings:"
+    sd15_checkpoint_tools_page = st.Page(
+        "pages/sd15_tools_page.py",
+        title="SD15 Checkpoint Tools",
+        icon=":material/settings:",
     )
-    enabled_sections = [sd15_page, sdxl_page, explore_page]
+    sdxl_checkpoint_tools_page = st.Page(
+        "pages/sdxl_tools_page.py",
+        title="SDXL Checkpoint Tools",
+        icon=":material/settings:",
+    )
+    enabled_sections = [sd15_page, sdxl_page, sd15_checkpoint_tools_page, sdxl_checkpoint_tools_page]
 
     # setup application main page
     pg = st.navigation(enabled_sections)
     st.set_page_config(
-        page_title="Red Hat Opensource AI", layout="wide", page_icon=":material/edit:"
+        page_title="Stable Diffusion WebApp", layout="wide", page_icon=":material/edit:"
     )
 
     # run app
