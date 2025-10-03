@@ -16,7 +16,6 @@ try:
             check_or_create_path,
         )
         from libs.stablediffusion.sd15 import (
-            gen_noise,
             load_custom_vae,
             SD15PipelineGenerator,
         )
@@ -364,8 +363,7 @@ try:
                         type="primary",
                         file_name=f"sd15_{gen_seed}.png",
                         icon=":material/download:",
-                        key=get_random_seed(), # needed to avoid duplicate errors in streamlit
+                        key=get_random_seed(),  # needed to avoid duplicate errors in streamlit
                     )
 except NameError as e:
     st.info("Select generation method and perform inference.")
-
