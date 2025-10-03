@@ -1,7 +1,7 @@
 [project]
 name = "sd-webapp"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.2.0"
+description = "A web application that generates images with Stable Diffusion."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
