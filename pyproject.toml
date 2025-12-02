@@ -1,6 +1,6 @@
 [project]
 name = "sd-webapp"
-version = "0.2.0"
+version = "0.3.0"
 description = "A web application that generates images with Stable Diffusion."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -10,6 +10,7 @@ dependencies = [
     "peft>=0.17.0",
     "pillow>=11.3.0",
     "streamlit>=1.48.0",
+    "streamlit-drawable-canvas-fix>=0.9.8",
     "torch>=2.8.0",
     "torchvision>=0.23.0",
     "transformers>=4.55.0",
