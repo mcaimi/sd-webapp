@@ -4,11 +4,12 @@
 try:
     import numpy as np
     from torch import Generator
-    from diffusers import StableDiffusionXLPipeline, AutoencoderKL, UNet2DConditionModel
+    from diffusers import StableDiffusionXLPipeline, StableDiffusionXLInpaintPipeline, AutoencoderKL, UNet2DConditionModel
     from libs.globals.vars import RANDOM_BIT_LENGTH, schedulers
     from libs.shared.utils import get_gpu
     from pathlib import PosixPath
     import random
+    from PIL import Image
 except Exception as e:
     print(f"Caught exception: {e}")
     raise e
@@ -115,6 +116,62 @@ def local_prediction(
     return np.array(prediction.images[0]), metadata
 
 
+# callback for SDXL inpainting on a local machine
+def local_inpaint_prediction(
+    model_pipeline,
+    prompt,
+    image,
+    mask_image,
+    negative_prompt="",
+    steps=10,
+    guidance_scale=7,
+    seed=-1,
+    scheduler=None,
+    accelerator="cpu",
+):
+    # prepare generator object
+    if seed == -1:
+        gen = Generator(accelerator).manual_seed(random.getrandbits(RANDOM_BIT_LENGTH))
+    else:
+        gen = Generator(accelerator).manual_seed(seed)
+
+    # ensure image and mask are PIL Images
+    if isinstance(image, np.ndarray):
+        image = Image.fromarray((image * 255).astype(np.uint8) if image.max() <= 1.0 else image.astype(np.uint8))
+    if isinstance(mask_image, np.ndarray):
+        mask_image = Image.fromarray((mask_image * 255).astype(np.uint8) if mask_image.max() <= 1.0 else mask_image.astype(np.uint8))
+    
+    # convert mask to grayscale if needed
+    if mask_image.mode != "L":
+        mask_image = mask_image.convert("L")
+
+    # generate inpainted image
+    prediction = model_pipeline(
+        prompt=prompt,
+        negative_prompt=negative_prompt,
+        image=image,
+        mask_image=mask_image,
+        num_inference_steps=steps,
+        guidance_scale=guidance_scale,
+        generator=gen,
+    )
+
+    # generation metadata payload
+    metadata = format_metadata(
+        prompt=prompt,
+        negative_prompt=negative_prompt,
+        steps=steps,
+        width=image.width,
+        height=image.height,
+        cfg=guidance_scale,
+        seed=seed,
+        scheduler=scheduler,
+    )
+    metadata["inpainting"] = True
+
+    return np.array(prediction.images[0]), metadata
+
+
 # generate sample noise
 def gen_noise(width: int = 1024, height: int = 1024, channels: int = 3):
     noise_image = np.random.rand(width, height, channels)
@@ -178,6 +235,7 @@ class SDXLPipelineGenerator:
     def __init__(self, model_checkpoint: str):
         self.model_checkpoint = model_checkpoint
         self.sdxl_pipeline = None
+        self.inpaint_pipeline = None
 
     # generation callback
     def forward(
@@ -219,7 +277,9 @@ class SDXLPipelineGenerator:
 
     # return scheduler config
     def getSchedulerConfig(self):
-        if self.sdxl_pipeline is not None:
+        if self.inpaint_pipeline is not None:
+            return self.inpaint_pipeline.scheduler.config
+        elif self.sdxl_pipeline is not None:
             return self.sdxl_pipeline.scheduler.config
         else:
             return None
@@ -259,13 +319,26 @@ class SDXLPipelineGenerator:
                         lora_scale=strength,
                         adapter_name=f"name_{weightsfile.name.split('.')[0]}",
                     )
-                else:
+                if self.inpaint_pipeline is not None:
+                    self.inpaint_pipeline.load_lora_weights(
+                        weightsfile,
+                        adapter_name=f"name_{weightsfile.name.split('.')[0]}",
+                    )
+                    # merge lora
+                    self.inpaint_pipeline.fuse_lora(
+                        lora_scale=strength,
+                        adapter_name=f"name_{weightsfile.name.split('.')[0]}",
+                    )
+                if self.sdxl_pipeline is None and self.inpaint_pipeline is None:
                     raise Exception("SDXL Model is not loaded")
 
     # send to accelerator
     def pipeToConfiguredDevice(self):
         # send model pipeline to the appropriate compute device
-        self.sdxl_pipeline.to(self.accelerator)
+        if self.sdxl_pipeline is not None:
+            self.sdxl_pipeline.to(self.accelerator)
+        if self.inpaint_pipeline is not None:
+            self.inpaint_pipeline.to(self.accelerator)
 
     # load custom VAE into pipeline
     def loadCustomVAE(self, vae_checkpoint: str | PosixPath):
@@ -274,6 +347,55 @@ class SDXLPipelineGenerator:
             self.sdxl_pipeline.vae = custom_vae
         else:
             raise Exception("SDXL Pipeline must be loaded before loading custom VAE")
+
+    # inpainting callback
+    def forward_inpaint(
+        self,
+        positive_prompt,
+        negative_prompt,
+        image,
+        mask_image,
+        scheduler_type,
+        steps,
+        cfg,
+        seed,
+    ):
+        # check if model is ready
+        if self.inpaint_pipeline is None:
+            import numpy as np
+            return np.random.rand(1024, 1024, 3), {
+                "generation": {"status": "no inpainting model loaded", "output": "noise matrix"}
+            }
+        else:
+            # call local inpainting callback function
+            print(f"Using Scheduler {scheduler_type} for inpainting")
+            self.inpaint_pipeline.scheduler = schedulers.get(scheduler_type).from_config(
+                self.inpaint_pipeline.scheduler.config
+            )
+            return local_inpaint_prediction(
+                self.inpaint_pipeline,
+                prompt=positive_prompt,
+                image=image,
+                mask_image=mask_image,
+                negative_prompt=negative_prompt,
+                steps=steps,
+                seed=seed,
+                guidance_scale=cfg,
+                scheduler=scheduler_type,
+                accelerator=self.accelerator,
+            )
+
+    # load stable diffusion xl inpainting pipeline from disk
+    def loadSDXLInpaintPipeline(self):
+        # check for GPU
+        try:
+            self.accelerator, self.dtype = get_gpu()
+            print(f"Loading SDXL Inpaint Checkpoint {self.model_checkpoint}")
+            self.inpaint_pipeline = StableDiffusionXLInpaintPipeline.from_single_file(
+                self.model_checkpoint, torch_dtype=self.dtype, use_safetensors=True
+            )
+        except Exception as e:
+            raise Exception(f"Caught Exception {e}", duration=5)
 
     # get common SDXL resolutions
     @staticmethod
