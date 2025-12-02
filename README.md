@@ -28,3 +28,4 @@ Tested:
 - SDXL Inference with optional LoRA support
 - SD1.5 Model Merging Capabilities
 - Support for custom VAEs in both SDXL and SD1.5 inference phases
+- SD1.5 and SDXL Inpainting
