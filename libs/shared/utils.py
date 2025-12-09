@@ -83,3 +83,8 @@ def get_gpu() -> (str, torch.dtype):
         dtype = torch.float32
 
     return accelerator, dtype
+
+# generate a random string
+def random_string(length=6):
+    import string,random
+    return "".join(random.choice(string.ascii_lowercase) for _ in range(length))
