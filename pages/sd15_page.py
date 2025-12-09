@@ -6,6 +6,7 @@
 try:
     import streamlit as st
     from dotenv import dotenv_values
+    import json
 
     with st.spinner("** LOADING INTERFACE... **"):
         # local imports
@@ -14,6 +15,8 @@ try:
             enumerate_models,
             read_safetensors_header,
             check_or_create_path,
+            random_string,
+            get_gpu
         )
         from libs.stablediffusion.sd15 import (
             load_custom_vae,
@@ -35,16 +38,7 @@ appSettings = Properties(config_file=config_filename)
 st.html("assets/sd15_header.html")
 
 # paths sanity check
-with st.spinner("Checking Paths"):
-    for path in [
-        appSettings.config_parameters.checkpoints.sd15.path,
-        appSettings.config_parameters.loras.sd15.path,
-        appSettings.config_parameters.checkpoints.sdxl.path,
-        appSettings.config_parameters.loras.sdxl.path,
-        appSettings.config_parameters.vae.sdxl.path,
-        appSettings.config_parameters.vae.sd15.path,
-    ]:
-        check_or_create_path(path)
+appSettings.setup_paths()
 
 
 # reset object cache
@@ -72,19 +66,26 @@ with st.sidebar:
 
     # show model metadata
     with st.spinner("Loading Model Metadata...."):
-        model_metadata = {
-            "model_checkpoint": selected_model,
-            "model_path": enumerate_models(
-                appSettings.config_parameters.checkpoints.sd15.path
-            )
-            .get(selected_model)
-            .absolute(),
-            "metadata": read_safetensors_header(
-                enumerate_models(
+        try:
+            model_metadata = {
+                "model_checkpoint": selected_model,
+                "model_path": enumerate_models(
                     appSettings.config_parameters.checkpoints.sd15.path
-                ).get(selected_model)
-            ),
-        }
+                )
+                .get(selected_model)
+                .absolute(),
+                "metadata": read_safetensors_header(
+                    enumerate_models(
+                        appSettings.config_parameters.checkpoints.sd15.path
+                    ).get(selected_model)
+                ),
+            }
+        except:
+            model_metadata = {
+                "model_checkpoint": "no model available",
+                "model_path": None,
+                "metadata": {},
+            }
 
     # select lora
     selected_lora = st.multiselect(
@@ -99,26 +100,34 @@ with st.sidebar:
     with st.spinner("Loading Lora Metadata...."):
         lora_metadata = {}
         for i, l in enumerate(selected_lora):
-            lora_metadata[f"lora_{i}"] = {
-                "name": l,
-                "lora_path": enumerate_models(
-                    appSettings.config_parameters.loras.sd15.path
-                )
-                .get(l)
-                .absolute(),
-                "merge_strength": st.slider(
-                    label=f"{l} merge strength",
-                    min_value=0.0,
-                    max_value=1.0,
-                    value=0.2,
-                    step=0.1,
-                ),
-                "metadata": read_safetensors_header(
-                    enumerate_models(appSettings.config_parameters.loras.sd15.path).get(
-                        l
+            try:
+                lora_metadata[f"lora_{i}"] = {
+                    "name": l,
+                    "lora_path": enumerate_models(
+                        appSettings.config_parameters.loras.sd15.path
                     )
-                ),
-            }
+                    .get(l)
+                    .absolute(),
+                    "merge_strength": st.slider(
+                        label=f"{l} merge strength",
+                        min_value=0.0,
+                        max_value=1.0,
+                        value=0.2,
+                        step=0.1,
+                    ),
+                    "metadata": read_safetensors_header(
+                        enumerate_models(appSettings.config_parameters.loras.sd15.path).get(
+                            l
+                        )
+                    ),
+                }
+            except:
+                lora_metadata[f"lora_{i}"] = {
+                    "name": "not available",
+                    "lora_path": None,
+                    "merge_strength": 0,
+                    "metadata": {},
+                }
 
     # select vae
     override_vae = st.checkbox("Override VAE", value=False, on_change=reset_model_cache)
@@ -134,19 +143,28 @@ with st.sidebar:
 
         # show model metadata
         with st.spinner("Loading VAE Metadata...."):
-            vae_metadata = {
-                "vae_checkpoint": selected_vae,
-                "vae_path": enumerate_models(
-                    appSettings.config_parameters.vae.sd15.path
-                )
-                .get(selected_vae)
-                .absolute(),
-                "metadata": read_safetensors_header(
-                    enumerate_models(appSettings.config_parameters.vae.sd15.path).get(
-                        selected_vae
+            try:
+                vae_metadata = {
+                    "vae_checkpoint": selected_vae,
+                    "vae_path": enumerate_models(
+                        appSettings.config_parameters.vae.sd15.path
                     )
-                ),
-            }
+                    .get(selected_vae)
+                    .absolute(),
+                    "metadata": read_safetensors_header(
+                        enumerate_models(appSettings.config_parameters.vae.sd15.path).get(
+                            selected_vae
+                        )
+                    ),
+                }
+            except:
+                vae_metadata = {
+                    "vae_checkpoint": "no available vae",
+                    "vae_path": None,
+                    "metadata": {},
+                }
+
+    st.markdown(f"**Device: {get_gpu()}**")
 
 # main page
 st.markdown("### **Stable Diffusion Generation Page, v1.5**")
@@ -328,25 +346,38 @@ try:
                 output_image, output_parameters, scheduler_config, gen_seed = element
 
                 # display results
-                img_out, parms_out, dwl_btn = st.columns(
-                    [1, 2, 1], border=True, vertical_alignment="center"
+                img_out, parms_out = st.columns(
+                    [2, 1], border=True, vertical_alignment="center"
                 )
 
+                # display image with streamlit
                 with img_out:
                     image_bytes = st.image(output_image, output_format="PNG")
-                with parms_out:
-                    st.json(
-                        {
+
+                # display and save inference parameters
+                gen_json: dict = {
                             "model_name": model_metadata.get("model_checkpoint"),
                             "lora_names": [
                                 lora_metadata.get(l)["name"] for l in lora_metadata
                             ],
                             "output_parameters": output_parameters,
                             "scheduler_config": scheduler_config,
-                        },
+                        }
+        
+                json_filename = f"sd15_{gen_seed}_{random_string()}.json"
+                with parms_out:
+                    st.json(gen_json,
                         expanded=False,
                     )
-                with dwl_btn:
+                
+                print("/".join((appSettings.config_parameters.storage.output_json,json_filename)))
+                with open("/".join((appSettings.config_parameters.storage.output_json,json_filename)), "w") as f:
+                    json.dump(gen_json, f)
+
+                # save image bytes
+                png_file = f"sd15_{gen_seed}_{random_string()}.png"
+                print("/".join((appSettings.config_parameters.storage.output_images, png_file)))
+                with open("/".join((appSettings.config_parameters.storage.output_images, png_file)), "wb") as f:
                     # save image
                     from io import BytesIO
                     from torchvision import transforms as tvT
@@ -357,13 +388,8 @@ try:
                     png_bytes = BytesIO()
                     pil_img(output_image).save(png_bytes, format="PNG")
 
-                    st.download_button(
-                        label="Download Image",
-                        data=png_bytes.getvalue(),
-                        type="primary",
-                        file_name=f"sd15_{gen_seed}.png",
-                        icon=":material/download:",
-                        key=get_random_seed(),  # needed to avoid duplicate errors in streamlit
-                    )
+                    # write
+                    f.write(png_bytes.getvalue())
+                    
 except NameError as e:
     st.info("Select generation method and perform inference.")

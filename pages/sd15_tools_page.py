@@ -52,16 +52,7 @@ if "merge_pipeline" not in st.session_state:
     st.session_state.merge_pipeline = SD15MergePipeline(device=get_gpu()[0])
 
 # paths sanity check
-with st.spinner("Checking Paths"):
-    for path in [
-        appSettings.config_parameters.checkpoints.sd15.path,
-        appSettings.config_parameters.loras.sd15.path,
-        appSettings.config_parameters.checkpoints.sdxl.path,
-        appSettings.config_parameters.loras.sdxl.path,
-        appSettings.config_parameters.vae.sdxl.path,
-        appSettings.config_parameters.vae.sd15.path,
-    ]:
-        check_or_create_path(path)
+appSettings.setup_paths()
 
 # declare function tabs
 sd15_info, sd15_merger, batch_merger, recipe_builder = st.tabs(
