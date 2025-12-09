@@ -16,3 +16,7 @@ vae:
     path: 'models/vae/SD15'
   sdxl:
     path: 'models/vae/SDXL'
+
+storage:
+  output_images: 'outputs/images'
+  output_json: 'outputs/json'

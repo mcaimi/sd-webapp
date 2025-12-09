@@ -4,6 +4,7 @@ import os
 from yaml import safe_load, YAMLError
 from libs.shared.parameters import Parameters
 from libs.shared.console_utils import ANSIColors
+from libs.shared.utils import check_or_create_path
 
 # settings class, wraps many configuration aspects of the LLM application
 class Properties(object):
@@ -36,3 +37,20 @@ class Properties(object):
     # session variables
     def get_properties_object(self) -> dict:
         return self.config_parameters
+
+    # parameters sanity check: create directories
+    def setup_paths(self):
+        try:
+            for path in [
+                self.config_parameters.checkpoints.sd15.path,
+                self.config_parameters.loras.sd15.path,
+                self.config_parameters.checkpoints.sdxl.path,
+                self.config_parameters.loras.sdxl.path,
+                self.config_parameters.vae.sdxl.path,
+                self.config_parameters.vae.sd15.path,
+                self.config_parameters.storage.output_images,
+                self.config_parameters.storage.output_json,
+            ]:
+                check_or_create_path(path)
+        except Exception as e:
+            print(f"Properties.setup_paths: {e}")
