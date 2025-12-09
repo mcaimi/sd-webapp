@@ -31,16 +31,24 @@ if __name__ == "__main__":
 
     # define app pages
     sd15_page = st.Page(
-        "pages/sd15_page.py", title="Stable Diffusion 1.5", icon=":material/chat:"
+        "pages/sd15_page.py",
+        title="Stable Diffusion 1.5",
+        icon=":material/chat:"
     )
     sd15_inpaint_page = st.Page(
-        "pages/sd15_inpaint_page.py", title="SD15 Inpainting", icon=":material/edit:"
+        "pages/sd15_inpaint_page.py",
+        title="SD15 Inpainting",
+        icon=":material/edit:"
     )
     sdxl_page = st.Page(
-        "pages/sdxl_page.py", title="Stable Diffusion XL", icon=":material/chat:"
+        "pages/sdxl_page.py",
+        title="Stable Diffusion XL",
+        icon=":material/chat:"
     )
     sdxl_inpaint_page = st.Page(
-        "pages/sdxl_inpaint_page.py", title="SDXL Inpainting", icon=":material/edit:"
+        "pages/sdxl_inpaint_page.py",
+        title="SDXL Inpainting",
+        icon=":material/edit:"
     )
     sd15_checkpoint_tools_page = st.Page(
         "pages/sd15_tools_page.py",
@@ -52,14 +60,20 @@ if __name__ == "__main__":
         title="SDXL Checkpoint Tools",
         icon=":material/settings:",
     )
-    enabled_sections = [
-        sd15_page,
-        sd15_inpaint_page,
-        sdxl_page,
-        sdxl_inpaint_page,
-        sd15_checkpoint_tools_page,
-        sdxl_checkpoint_tools_page,
-    ]
+    enabled_sections = {
+        "Txt2Img": [
+            sd15_page,
+            sdxl_page,
+        ],
+        "Inpainting": [
+            sd15_inpaint_page,
+            sdxl_inpaint_page,
+        ],
+        "Model Merging": [
+            sd15_checkpoint_tools_page,
+            sdxl_checkpoint_tools_page,
+        ],
+    }
 
     # setup application main page
     pg = st.navigation(enabled_sections)
