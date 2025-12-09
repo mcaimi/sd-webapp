@@ -52,16 +52,7 @@ if "xl_merge_pipeline" not in st.session_state:
     st.session_state.xl_merge_pipeline = SDXLMergePipeline(device=get_gpu()[0])
 
 # paths sanity check
-with st.spinner("Checking Paths"):
-    for path in [
-        appSettings.config_parameters.checkpoints.sd15.path,
-        appSettings.config_parameters.loras.sd15.path,
-        appSettings.config_parameters.checkpoints.sdxl.path,
-        appSettings.config_parameters.loras.sdxl.path,
-        appSettings.config_parameters.vae.sdxl.path,
-        appSettings.config_parameters.vae.sd15.path,
-    ]:
-        check_or_create_path(path)
+appSettings.setup_paths()
 
 # declare function tabs
 sdxl_info, sdxl_merger, xl_batch_merger, xl_recipe_builder = st.tabs(
