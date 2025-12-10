@@ -377,7 +377,7 @@ if uploaded_image is not None:
                 st.image(output_image, width="stretch")
 
                 # save image to disk
-                png_file = f"sd15_{gen_seed}_{random_string()}.png"
+                png_file = f"sd15_inpaint_{gen_seed}_{random_string()}.png"
                 print("/".join((appSettings.config_parameters.storage.output_images, png_file)))
                 
                 # write bytes

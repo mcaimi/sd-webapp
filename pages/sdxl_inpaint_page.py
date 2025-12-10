@@ -377,7 +377,7 @@ if uploaded_image is not None:
                 st.image(output_image, width="content")
                 
                 # save image
-                png_file = f"sdxl_{gen_seed}_{random_string()}.png"
+                png_file = f"sdxl_inpaint_{gen_seed}_{random_string()}.png"
                 print("/".join((appSettings.config_parameters.storage.output_images, png_file)))
                 with open("/".join((appSettings.config_parameters.storage.output_images, png_file)), "wb") as f:
                     from torchvision import transforms as tvT
@@ -401,7 +401,7 @@ if uploaded_image is not None:
                         "seed": gen_seed,
                     }
 
-                json_filename: str = f"sdxl_{gen_seed}_{random_string()}.json"
+                json_filename: str = f"sdxl_inpaint_{gen_seed}_{random_string()}.json"
                 st.json(
                     gen_json,
                     expanded=False,
