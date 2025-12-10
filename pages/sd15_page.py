@@ -22,6 +22,7 @@ try:
             load_custom_vae,
             SD15PipelineGenerator,
         )
+        from libs.stablediffusion.metadata import GenerationMetadata
         from libs.globals.vars import schedulers, RANDOM_BIT_LENGTH
         from libs.stablediffusion.funcs import get_random_seed
 except Exception as e:
@@ -171,37 +172,63 @@ st.markdown("### **Stable Diffusion Generation Page, v1.5**")
 st.markdown("*Generate images using Stable Diffusion 1.5 models.*")
 
 # common features
+pprompt: str = ""
+nprompt: str = ""
+gscale: float = 7.0
+num_inference_steps: int = 50
+owidth: int = 512
+oheight: int = 768
+oseed: int = -1
+oscheduler: int = 0
+
+# load previous generation parameters
+prev_gen_metadata = st.file_uploader("Load Inference Parameters from file...", accept_multiple_files=False, type="json")
+if prev_gen_metadata is not None:
+    prev_metadata = GenerationMetadata(json.load(prev_gen_metadata))
+
+    # set values
+    pprompt = prev_metadata.prompt or pprompt
+    nprompt = prev_metadata.negative_prompt or nprompt
+    gscale = prev_metadata.guidance_scale or gscale
+    num_inference_steps = prev_metadata.num_inference_steps or num_inference_steps
+    owidth = prev_metadata.width or owidth
+    oheight = prev_metadata.height or oheight
+    oseed = prev_metadata.seed or oseed
+    # select scheduler
+    oscheduler = [s for s in schedulers.keys()].index(prev_metadata.scheduler) or oscheduler
+
 # image generate
 # align text prompts on the left
 positive_prompt = st.text_area(
-    "Positive Prompt", placeholder="Write here what you want in the image"
+    "Positive Prompt", value=pprompt, placeholder="Write here what you want in the image"
 )
 negative_prompt = st.text_area(
-    "Negative Prompt", placeholder="Write here what you don't want in the image"
+    "Negative Prompt", value=nprompt, placeholder="Write here what you don't want in the image"
 )
 
 # settings section
 with st.expander("Generation Settings..."):
     guidance = st.slider(
-        "Guidance Scale", value=7.0, min_value=0.0, max_value=50.0, step=0.1
+        "Guidance Scale", value=gscale, min_value=0.0, max_value=50.0, step=0.1
     )
     with st.container(border=True):
         w, h = st.columns([1, 1])
-        width = w.number_input("Image Width", value=512)
-        height = h.number_input("Image Height", value=768)
+        width = w.number_input("Image Width", value=owidth)
+        height = h.number_input("Image Height", value=oheight)
 
-    inference_steps = st.number_input("Inference Steps", value=20)
+    inference_steps = st.number_input("Inference Steps", value=num_inference_steps)
 
     with st.container(border=True):
         batch_size = st.number_input("Batch Size", min_value=1, value=1)
 
     with st.container(border=True):
         sched, seedbox = st.columns([1, 1])
-        scheduler_type = sched.selectbox("Noise Scheduler", options=schedulers, index=0)
+        scheduler_type = sched.selectbox("Noise Scheduler", options=schedulers, index=oscheduler)
         seed = seedbox.number_input(
             "Random Seed",
             min_value=-1,
             max_value=None,
+            value=oseed,
             step=1,
             help="Generation Seed. -1 Means Random Seed",
         )
@@ -357,8 +384,11 @@ try:
                 # display and save inference parameters
                 gen_json: dict = {
                             "model_name": model_metadata.get("model_checkpoint"),
-                            "lora_names": [
-                                lora_metadata.get(l)["name"] for l in lora_metadata
+                            "loras": [
+                                {
+                                    "lora_name": lora_metadata.get(l)["name"],
+                                    "merge_strength": lora_metadata.get(l)["merge_strength"]
+                                } for l in lora_metadata
                             ],
                             "output_parameters": output_parameters,
                             "scheduler_config": scheduler_config,

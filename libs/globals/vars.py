@@ -14,7 +14,7 @@ from diffusers.schedulers import (DPMSolverMultistepScheduler,
 DEFAULT_MODELS_PATH = "models/stable-diffusion"
 DEFAULT_LORA_PATH = "models/lora"
 SFT_HEADER_LEN = 8
-RANDOM_BIT_LENGTH = 64
+RANDOM_BIT_LENGTH = 32
 
 # scheduler types
 schedulers = {"DPM++ 2M": DPMSolverMultistepScheduler,

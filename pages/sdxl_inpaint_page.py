@@ -393,8 +393,11 @@ if uploaded_image is not None:
 
                 gen_json: str = {
                         "model_name": model_metadata.get("model_checkpoint"),
-                        "lora_names": [
-                            lora_metadata.get(l)["name"] for l in lora_metadata
+                        "loras": [
+                            {
+                                "lora_name": lora_metadata.get(l)["name"],
+                                "merge_strength": lora_metadata.get(l)["merge_strength"]
+                            } for l in lora_metadata
                         ],
                         "output_parameters": output_parameters,
                         "scheduler_config": scheduler_config,
