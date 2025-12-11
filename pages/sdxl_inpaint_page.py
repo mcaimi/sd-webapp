@@ -353,6 +353,7 @@ if uploaded_image is not None:
             
             # run inference
             gen_seed = seed if (seed > 0) else get_random_seed(RANDOM_BIT_LENGTH)
+            inference_uuid: str = random_string()
             
             with st.spinner("Inpainting image..."):
                 output_image, output_parameters = sd_generator.forward_inpaint(
@@ -377,7 +378,7 @@ if uploaded_image is not None:
                 st.image(output_image, width="content")
                 
                 # save image
-                png_file = f"sdxl_inpaint_{gen_seed}_{random_string()}.png"
+                png_file = f"sdxl_inpaint_{gen_seed}_{inference_uuid}.png"
                 print("/".join((appSettings.config_parameters.storage.output_images, png_file)))
                 with open("/".join((appSettings.config_parameters.storage.output_images, png_file)), "wb") as f:
                     from torchvision import transforms as tvT
@@ -404,7 +405,7 @@ if uploaded_image is not None:
                         "seed": gen_seed,
                     }
 
-                json_filename: str = f"sdxl_inpaint_{gen_seed}_{random_string()}.json"
+                json_filename: str = f"sdxl_inpaint_{gen_seed}_{inference_uuid}.json"
                 st.json(
                     gen_json,
                     expanded=False,

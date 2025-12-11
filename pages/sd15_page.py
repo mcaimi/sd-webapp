@@ -371,6 +371,7 @@ try:
             for element in generated_pixmaps:
                 # get image data
                 output_image, output_parameters, scheduler_config, gen_seed = element
+                inference_uuid: str = random_string()
 
                 # display results
                 img_out, parms_out = st.columns(
@@ -394,7 +395,7 @@ try:
                             "scheduler_config": scheduler_config,
                         }
         
-                json_filename = f"sd15_{gen_seed}_{random_string()}.json"
+                json_filename = f"sd15_{gen_seed}_{inference_uuid}.json"
                 with parms_out:
                     st.json(gen_json,
                         expanded=False,
@@ -405,7 +406,7 @@ try:
                     json.dump(gen_json, f)
 
                 # save image bytes
-                png_file = f"sd15_{gen_seed}_{random_string()}.png"
+                png_file = f"sd15_{gen_seed}_{inference_uuid}.png"
                 print("/".join((appSettings.config_parameters.storage.output_images, png_file)))
                 with open("/".join((appSettings.config_parameters.storage.output_images, png_file)), "wb") as f:
                     # save image

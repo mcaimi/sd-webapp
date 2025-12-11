@@ -353,7 +353,8 @@ if uploaded_image is not None:
             
             # run inference
             gen_seed = seed if (seed > 0) else get_random_seed(RANDOM_BIT_LENGTH)
-            
+            inference_uuid: str = random_string()
+
             with st.spinner("Inpainting image..."):
                 output_image, output_parameters = sd_generator.forward_inpaint(
                     positive_prompt=positive_prompt,
@@ -377,7 +378,7 @@ if uploaded_image is not None:
                 st.image(output_image, width="stretch")
 
                 # save image to disk
-                png_file = f"sd15_inpaint_{gen_seed}_{random_string()}.png"
+                png_file = f"sd15_inpaint_{gen_seed}_{inference_uuid}.png"
                 print("/".join((appSettings.config_parameters.storage.output_images, png_file)))
                 
                 # write bytes
@@ -411,7 +412,7 @@ if uploaded_image is not None:
                 )
 
                 # save generation parameters
-                json_filename: str = f"sd15_inpaint_{gen_seed}_{random_string()}.json"
+                json_filename: str = f"sd15_inpaint_{gen_seed}_{inference_uuid}.json"
                 print("/".join((appSettings.config_parameters.storage.output_json,json_filename)))
                 with open("/".join((appSettings.config_parameters.storage.output_json,json_filename)), "w") as f:
                     json.dump(gen_json, f)
