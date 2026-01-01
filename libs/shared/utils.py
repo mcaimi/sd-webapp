@@ -1,90 +1,148 @@
 #!/usr/bin/env python
+"""
+Shared Utility Functions
+
+Common utilities used across the application for file operations,
+GPU detection, safetensors handling, etc.
+"""
 
 import os
-try:
-    import struct
-    import json
-    import torch
-    from pathlib import Path, PosixPath
-    from libs.globals.vars import DEFAULT_MODELS_PATH, DEFAULT_LORA_PATH, SFT_HEADER_LEN
-except ImportError as e:
-    print(f"Caught fatal exception: {e}")
+import json
+import random
+import string
+import struct
+from pathlib import Path
+from typing import Dict, Tuple, Union
 
-# buil requests header object
-def build_header(api_key: str) -> dict:
-    if api_key is None or api_key == "":
-        api_key = "apikey_openai"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}"  # Bearer token format
+import torch
+import torch.cuda as cuda
+import torch.backends.mps as apple_mps
+
+from libs.globals.vars import DEFAULT_MODELS_PATH, DEFAULT_LORA_PATH, SFT_HEADER_LEN
+
+
+def check_or_create_path(target_path: Union[str, Path]) -> None:
+    """
+    Ensure a directory exists, creating it if necessary.
+    
+    Args:
+        target_path: Path to the directory
+    """
+    path = Path(target_path) if isinstance(target_path, str) else target_path
+    if not path.is_dir():
+        path.mkdir(parents=True, exist_ok=True)
+
+
+def enumerate_models(path: Union[str, Path] = DEFAULT_MODELS_PATH) -> Dict[str, Path]:
+    """
+    Enumerate all safetensors model files in a directory.
+    
+    Args:
+        path: Directory to search for models
+        
+    Returns:
+        Dictionary mapping filename to full Path
+    """
+    model_path = Path(path)
+    model_files = model_path.glob("**/*.safetensors")
+    
+    return {
+        filepath.name: filepath
+        for filepath in model_files
     }
-    return headers
 
-# ensure directory structure exists
-def check_or_create_path(targetpath: str) -> None:
-    if not os.path.isdir(targetpath):
-        os.makedirs(targetpath, exist_ok=True)
 
-# scrape model filenames from the filesystem
-def enumerate_models(path: str = DEFAULT_MODELS_PATH) -> dict:
-    mp = Path(path)
-    model_files = mp.glob("**/*.safetensors")
+def read_safetensors_header(filename: Union[str, Path]) -> Dict:
+    """
+    Read and parse the metadata header from a safetensors file.
+    
+    Args:
+        filename: Path to the safetensors file
+        
+    Returns:
+        Parsed metadata dictionary
+        
+    Raises:
+        Exception: If file cannot be read or parsed
+    """
+    if isinstance(filename, str):
+        filepath = Path(filename)
+    elif isinstance(filename, Path):
+        filepath = filename.absolute()
+    else:
+        raise TypeError(
+            f"read_safetensors_header(): filename must be str or Path, got {type(filename).__name__}"
+        )
+    
+    with open(filepath, "rb") as f:
+        # Read header length (8 bytes, little-endian unsigned long long)
+        header_bytes = f.read(SFT_HEADER_LEN)
+        metadata_len = struct.unpack("<Q", header_bytes)[0]
+        
+        # Read and parse metadata
+        metadata = f.read(metadata_len)
+        return json.loads(metadata)
 
-    # populate dictionary
-    available_models = {}
-    for filename in model_files:
-        available_models[os.path.basename(filename)] = filename
 
-    return available_models
-
-# open a safetensors file and read its header
-def read_safetensors_header(filename: str|PosixPath) -> str:
-    try:
-        if type(filename) == str:
-            fname = filename
-        elif type(filename) == PosixPath:
-            fname = filename.absolute()
-        else:
-            raise Exception("read_safetensors_header(): filename must be a string or Path object")
-        # open Path
-        with open(fname, "rb") as s_fd:
-            # read header
-            header_bytes = s_fd.read(SFT_HEADER_LEN)
-            metadata_len = struct.unpack("<Q", header_bytes)[0]
-
-            # read metadata from file
-            metadata = s_fd.read(metadata_len)
-            return json.loads(metadata)
-    except Exception as e:
-        raise e
-
-# detect available gpu
-def get_gpu() -> (str, torch.dtype):
-    try:
-        import torch
-        import torch.cuda as cuda
-        import torch.backends.mps as apple_mps
-    except Exception as e:
-        raise e
-
+def get_gpu() -> Tuple[str, torch.dtype]:
+    """
+    Detect and return the best available compute device.
+    
+    Returns:
+        Tuple of (device_name, recommended_dtype)
+        Device will be one of: "mps", "cuda", or "cpu"
+    """
     accelerator = "cpu"
     dtype = torch.float16
+    
     if apple_mps.is_available():
         print("Apple Metal Performance Shaders Available!")
         accelerator = "mps"
     elif cuda.is_available():
         device_name = cuda.get_device_name()
         device_capabilities = cuda.get_device_capability()
-        device_available_mem, device_total_mem = [x / 1024**3 for x in cuda.mem_get_info()]
-        print(f"A GPU is available! [{device_name} - {device_capabilities} - {device_available_mem}/{device_total_mem} GB VRAM]")
+        device_available_mem, device_total_mem = [
+            x / 1024**3 for x in cuda.mem_get_info()
+        ]
+        print(
+            f"A GPU is available! [{device_name} - {device_capabilities} - "
+            f"{device_available_mem:.1f}/{device_total_mem:.1f} GB VRAM]"
+        )
         accelerator = "cuda"
     else:
-        print("NO GPU FOUND.")
+        print("NO GPU FOUND. Using CPU (this will be slow).")
         dtype = torch.float32
-
+    
     return accelerator, dtype
 
-# generate a random string
-def random_string(length=6):
-    import string,random
+
+def random_string(length: int = 6) -> str:
+    """
+    Generate a random lowercase string.
+    
+    Args:
+        length: Length of the string to generate
+        
+    Returns:
+        Random string of specified length
+    """
     return "".join(random.choice(string.ascii_lowercase) for _ in range(length))
+
+
+def build_header(api_key: str) -> Dict[str, str]:
+    """
+    Build HTTP request headers with authorization.
+    
+    Args:
+        api_key: API key for authentication
+        
+    Returns:
+        Headers dictionary
+    """
+    if not api_key:
+        api_key = "apikey_openai"
+    
+    return {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}",
+    }
