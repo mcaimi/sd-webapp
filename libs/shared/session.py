@@ -7,11 +7,6 @@ Provides a wrapper class for Streamlit's session state management.
 
 from typing import Any
 
-try:
-    from streamlit import warning
-except Exception as e:
-    raise e
-
 
 class Session:
     """Wrapper for Streamlit session state management."""
@@ -46,3 +41,4 @@ class Session:
         """
         if key in self.streamlit_session:
             del self.streamlit_session[key]
+

@@ -6,7 +6,6 @@ Common utilities used across the application for file operations,
 GPU detection, safetensors handling, etc.
 """
 
-import os
 import json
 import logging
 import random
@@ -20,7 +19,7 @@ import torch
 import torch.cuda as cuda
 import torch.backends.mps as apple_mps
 
-from libs.globals.vars import DEFAULT_MODELS_PATH, DEFAULT_LORA_PATH, SFT_HEADER_LEN
+from libs.globals.vars import DEFAULT_MODELS_PATH, SFT_HEADER_LEN
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +27,7 @@ logger = logging.getLogger(__name__)
 def check_or_create_path(target_path: Union[str, Path]) -> None:
     """
     Ensure a directory exists, creating it if necessary.
-    
+
     Args:
         target_path: Path to the directory
     """
@@ -55,10 +54,7 @@ def enumerate_models(path: Union[str, Path] = DEFAULT_MODELS_PATH) -> Dict[str, 
     model_path = Path(path) if isinstance(path, str) else path
     model_files = model_path.glob("**/*.safetensors")
 
-    return {
-        filepath.name: filepath
-        for filepath in model_files
-    }
+    return {filepath.name: filepath for filepath in model_files}
 
 
 def _read_safetensors_header_impl(filepath_str: str) -> Dict:
@@ -149,7 +145,10 @@ def get_gpu() -> Tuple[str, torch.dtype]:
         ]
         logger.info(
             "GPU available: %s - %s - %.1f/%.1f GB VRAM",
-            device_name, device_capabilities, device_available_mem, device_total_mem
+            device_name,
+            device_capabilities,
+            device_available_mem,
+            device_total_mem,
         )
         accelerator = "cuda"
     else:
@@ -162,10 +161,10 @@ def get_gpu() -> Tuple[str, torch.dtype]:
 def random_string(length: int = 6) -> str:
     """
     Generate a random lowercase string.
-    
+
     Args:
         length: Length of the string to generate
-        
+
     Returns:
         Random string of specified length
     """
@@ -175,16 +174,16 @@ def random_string(length: int = 6) -> str:
 def build_header(api_key: str) -> Dict[str, str]:
     """
     Build HTTP request headers with authorization.
-    
+
     Args:
         api_key: API key for authentication
-        
+
     Returns:
         Headers dictionary
     """
     if not api_key:
         api_key = "apikey_openai"
-    
+
     return {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {api_key}",
