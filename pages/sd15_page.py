@@ -14,13 +14,12 @@ import json
 import streamlit as st
 
 from libs.shared.config import get_app_config
-from libs.shared.utils import enumerate_models, read_safetensors_header, random_string
-from libs.shared.ui_components import (
-    GenerationSettings,
+from libs.shared.utils import enumerate_models, read_safetensors_header
+from libs.shared.models import GenerationSettings
+from libs.shared.ui.generation import (
     create_prompt_inputs,
-    display_generation_results,
-    reset_streamlit_cache,
 )
+from libs.shared.ui.display import reset_streamlit_cache, display_generation_results
 from libs.stablediffusion.sd15 import SD15PipelineGenerator, load_custom_vae
 from libs.stablediffusion.metadata import GenerationMetadata
 from libs.globals.vars import schedulers, RANDOM_BIT_LENGTH
@@ -63,8 +62,12 @@ with st.sidebar:
         try:
             model_metadata = {
                 "model_checkpoint": selected_model,
-                "model_path": model_options.get(selected_model).absolute() if selected_model else None,
-                "metadata": read_safetensors_header(model_options.get(selected_model)) if selected_model else {},
+                "model_path": model_options.get(selected_model).absolute()
+                if selected_model
+                else None,
+                "metadata": read_safetensors_header(model_options.get(selected_model))
+                if selected_model
+                else {},
             }
         except Exception:
             model_metadata = {
@@ -165,12 +168,16 @@ if prev_gen_file is not None:
     defaults.positive_prompt = prev_metadata.prompt or ""
     defaults.negative_prompt = prev_metadata.negative_prompt or ""
     defaults.guidance_scale = prev_metadata.guidance_scale or defaults.guidance_scale
-    defaults.inference_steps = prev_metadata.num_inference_steps or defaults.inference_steps
+    defaults.inference_steps = (
+        prev_metadata.num_inference_steps or defaults.inference_steps
+    )
     defaults.width = prev_metadata.width or defaults.width
     defaults.height = prev_metadata.height or defaults.height
     defaults.seed = prev_metadata.seed or defaults.seed
     try:
-        defaults.scheduler_index = list(schedulers.keys()).index(prev_metadata.scheduler)
+        defaults.scheduler_index = list(schedulers.keys()).index(
+            prev_metadata.scheduler
+        )
     except (ValueError, AttributeError):
         pass
 
@@ -183,7 +190,11 @@ positive_prompt, negative_prompt = create_prompt_inputs(
 # Generation settings
 with st.expander("Generation Settings..."):
     guidance = st.slider(
-        "Guidance Scale", value=defaults.guidance_scale, min_value=0.0, max_value=50.0, step=0.1
+        "Guidance Scale",
+        value=defaults.guidance_scale,
+        min_value=0.0,
+        max_value=50.0,
+        step=0.1,
     )
     with st.container(border=True):
         w, h = st.columns([1, 1])
@@ -197,9 +208,15 @@ with st.expander("Generation Settings..."):
 
     with st.container(border=True):
         sched, seedbox = st.columns([1, 1])
-        scheduler_type = sched.selectbox("Noise Scheduler", options=schedulers, index=defaults.scheduler_index)
+        scheduler_type = sched.selectbox(
+            "Noise Scheduler", options=schedulers, index=defaults.scheduler_index
+        )
         seed = seedbox.number_input(
-            "Random Seed", min_value=-1, max_value=None, value=defaults.seed, step=1,
+            "Random Seed",
+            min_value=-1,
+            max_value=None,
+            value=defaults.seed,
+            step=1,
             help="Generation Seed. -1 Means Random Seed",
         )
 
@@ -210,13 +227,17 @@ with image_gen_tab:
     gen_info_col, gen_btn_col = st.columns([2, 1])
 
     with gen_info_col:
-        st.markdown(f"**Generate Images using model {model_metadata.get('model_checkpoint')}**.")
+        st.markdown(
+            f"**Generate Images using model {model_metadata.get('model_checkpoint')}**."
+        )
 
     with gen_btn_col:
         submit_button = st.button("Generate", type="primary")
 
     if submit_button:
-        with st.spinner(f"Loading Stable Diffusion Model {model_metadata.get('model_checkpoint')}..."):
+        with st.spinner(
+            f"Loading Stable Diffusion Model {model_metadata.get('model_checkpoint')}..."
+        ):
             sd_generator = load_sd15_model(model_metadata.get("model_path"))
             sd_generator.loadSDPipeline()
 
@@ -225,7 +246,9 @@ with image_gen_tab:
 
         if override_vae and vae_metadata:
             with st.spinner(f"Loading VAE {vae_metadata.get('vae_path')}..."):
-                sd_generator.pipeline.vae = load_custom_vae(vae_metadata.get("vae_path"))
+                sd_generator.pipeline.vae = load_custom_vae(
+                    vae_metadata.get("vae_path")
+                )
 
         with st.spinner(f"Moving pipeline to device: {sd_generator.accelerator}"):
             sd_generator.pipeToConfiguredDevice()
@@ -233,7 +256,9 @@ with image_gen_tab:
         # Run inference
         generated_pixmaps = []
         if batch_size > 1 and seed > 0:
-            st.warning(f"Seed {seed} is constant and batch size is {batch_size}: Images will be identical.")
+            st.warning(
+                f"Seed {seed} is constant and batch size is {batch_size}: Images will be identical."
+            )
 
         for i in range(batch_size):
             gen_seed = seed if seed > 0 else get_random_seed(RANDOM_BIT_LENGTH)
@@ -249,13 +274,17 @@ with image_gen_tab:
                     cfg=guidance,
                 )
                 scheduler_config = sd_generator.getSchedulerConfig()
-            generated_pixmaps.append((output_image, output_parameters, scheduler_config, gen_seed))
+            generated_pixmaps.append(
+                (output_image, output_parameters, scheduler_config, gen_seed)
+            )
 
 with model_comparison_tab:
     comp_info_col, comp_btn_col = st.columns([2, 1])
 
     with comp_info_col:
-        st.markdown("**Generate images with consistent parameters across selected models.**")
+        st.markdown(
+            "**Generate images with consistent parameters across selected models.**"
+        )
         target_models = st.multiselect(
             label="Select target models",
             max_selections=6,
@@ -265,7 +294,9 @@ with model_comparison_tab:
         )
 
     with comp_btn_col:
-        gen_button = st.button("Generate over Models", type="primary", disabled=(len(target_models) == 0))
+        gen_button = st.button(
+            "Generate over Models", type="primary", disabled=(len(target_models) == 0)
+        )
 
     if gen_button:
         generated_pixmaps = []
@@ -282,7 +313,9 @@ with model_comparison_tab:
 
             if override_vae and vae_metadata:
                 with st.spinner(f"Loading VAE {vae_metadata.get('vae_path')}..."):
-                    pipeline.pipeline.vae = load_custom_vae(vae_metadata.get("vae_path"))
+                    pipeline.pipeline.vae = load_custom_vae(
+                        vae_metadata.get("vae_path")
+                    )
 
             with st.spinner(f"Moving pipeline to device: {pipeline.accelerator}"):
                 pipeline.pipeToConfiguredDevice()
@@ -299,7 +332,9 @@ with model_comparison_tab:
                     cfg=guidance,
                 )
                 scheduler_config = pipeline.getSchedulerConfig()
-            generated_pixmaps.append((output_image, output_parameters, scheduler_config, gen_seed))
+            generated_pixmaps.append(
+                (output_image, output_parameters, scheduler_config, gen_seed)
+            )
             reset_model_cache()
 
 # === OUTPUT SECTION ===
