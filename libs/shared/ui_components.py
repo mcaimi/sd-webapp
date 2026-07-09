@@ -8,6 +8,7 @@ This reduces code duplication across pages while maintaining consistency.
 
 import json
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from io import BytesIO
 from pathlib import Path
@@ -172,39 +173,65 @@ def create_lora_selector(
         on_change=on_change,
         key=f"{model_type}_lora_select{key_suffix}",
     )
-    
+
     lora_selections = {}
-    
+
+    if not selected_loras:
+        return lora_selections
+
+    # Load metadata in parallel for better performance
+    def load_lora_metadata(i: int, lora_name: str, lora_path: Optional[Path]) -> Tuple:
+        """Load LoRA metadata (runs in thread pool)."""
+        try:
+            metadata = read_safetensors_header(lora_path) if lora_path else {}
+            return i, lora_name, lora_path, metadata, None
+        except Exception as e:
+            logger.warning("Failed to load LoRA metadata for %s: %s", lora_name, e)
+            return i, lora_name, None, {}, e
+
     with st.spinner("Loading LoRA metadata..."):
+        # Pre-load all metadata in parallel (I/O bound operation)
+        metadata_results = {}
+        with ThreadPoolExecutor(max_workers=min(4, len(selected_loras))) as executor:
+            futures = {
+                executor.submit(
+                    load_lora_metadata, i, lora_name, available_loras.get(lora_name)
+                ): i
+                for i, lora_name in enumerate(selected_loras)
+            }
+
+            for future in as_completed(futures):
+                i, lora_name, lora_path, metadata, error = future.result()
+                metadata_results[i] = (lora_name, lora_path, metadata, error)
+
+        # Create UI elements in main thread (must be sequential)
         for i, lora_name in enumerate(selected_loras):
-            lora_file_path = available_loras.get(lora_name)
-            
-            try:
-                strength = st.slider(
-                    label=f"{lora_name} merge strength",
-                    min_value=0.0,
-                    max_value=1.0,
-                    value=0.2,
-                    step=0.1,
-                    key=f"{model_type}_lora_strength_{i}{key_suffix}",
-                )
-                
-                metadata = read_safetensors_header(lora_file_path) if lora_file_path else {}
-                
+            lora_name_loaded, lora_path, metadata, error = metadata_results[i]
+
+            strength = st.slider(
+                label=f"{lora_name} merge strength",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.2,
+                step=0.1,
+                key=f"{model_type}_lora_strength_{i}{key_suffix}",
+            )
+
+            if error is None:
                 lora_selections[f"lora_{i}"] = LoraSelection(
-                    name=lora_name,
-                    path=lora_file_path.absolute() if lora_file_path else None,
+                    name=lora_name_loaded,
+                    path=lora_path.absolute() if lora_path else None,
                     merge_strength=strength,
                     metadata=metadata,
                 )
-            except Exception:
+            else:
                 lora_selections[f"lora_{i}"] = LoraSelection(
                     name="not available",
                     path=None,
                     merge_strength=0,
                     metadata={},
                 )
-    
+
     return lora_selections
 
 
