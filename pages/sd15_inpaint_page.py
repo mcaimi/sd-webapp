@@ -9,7 +9,6 @@ Provides inpainting functionality with:
 - Custom VAE support
 """
 
-import json
 from io import BytesIO
 
 import numpy as np
@@ -18,12 +17,16 @@ from streamlit_drawable_canvas import st_canvas
 from PIL import Image
 
 from libs.shared.config import get_app_config
-from libs.shared.utils import enumerate_models, read_safetensors_header, random_string, get_gpu
-from libs.shared.ui_components import (
-    create_prompt_inputs,
-    save_generation_output,
-    reset_streamlit_cache,
+from libs.shared.utils import (
+    enumerate_models,
+    read_safetensors_header,
+    random_string,
+    get_gpu,
 )
+from libs.shared.persistence import (
+    save_generation_output,
+)
+from libs.shared.ui.display import reset_streamlit_cache
 from libs.stablediffusion.sd15 import SD15PipelineGenerator, load_custom_vae
 from libs.globals.vars import schedulers, RANDOM_BIT_LENGTH
 from libs.stablediffusion.funcs import get_random_seed
@@ -64,8 +67,12 @@ with st.sidebar:
         try:
             model_metadata = {
                 "model_checkpoint": selected_model,
-                "model_path": model_options.get(selected_model).absolute() if selected_model else None,
-                "metadata": read_safetensors_header(model_options.get(selected_model)) if selected_model else {},
+                "model_path": model_options.get(selected_model).absolute()
+                if selected_model
+                else None,
+                "metadata": read_safetensors_header(model_options.get(selected_model))
+                if selected_model
+                else {},
             }
         except Exception:
             model_metadata = {
@@ -157,22 +164,26 @@ mask_image = None
 
 if uploaded_image is not None:
     # Tabs for mask creation methods
-    draw_mask_tab, upload_mask_tab = st.tabs(["Freeform Mask", "Upload Mask Rasterfile"])
+    draw_mask_tab, upload_mask_tab = st.tabs(
+        ["Freeform Mask", "Upload Mask Rasterfile"]
+    )
 
     with draw_mask_tab:
         image_mask_col, settings_col = st.columns([2, 1])
-        
+
         with settings_col:
             with st.container(border=True):
-                st.info("Draw a mask on the image: white areas will be inpainted and black areas will be preserved.")
-                
+                st.info(
+                    "Draw a mask on the image: white areas will be inpainted and black areas will be preserved."
+                )
+
                 drawing_mode = st.selectbox(
                     "Drawing tool:",
                     ("freedraw", "point", "line", "rect", "circle", "transform"),
                 )
                 stroke_width = st.slider("Stroke width:", 1, 25, 3)
                 point_display_radius = 0
-                if drawing_mode == 'point':
+                if drawing_mode == "point":
                     point_display_radius = st.slider("Point display radius:", 1, 25, 3)
 
                 c1, c2 = st.columns([1, 1])
@@ -208,6 +219,7 @@ if uploaded_image is not None:
 
                 # Download mask button
                 from torchvision import transforms as tvT
+
                 pil_img = tvT.ToPILImage()
                 png_bytes = BytesIO()
                 pil_img(mask_image).save(png_bytes, format="PNG")
@@ -227,11 +239,13 @@ if uploaded_image is not None:
 
         with col1:
             st.markdown("**Original Image**")
-            st.image(input_image, width='content')
+            st.image(input_image, width="content")
 
         with col2:
             st.markdown("**Mask Image**")
-            st.info("Upload a mask image where white areas will be inpainted and black areas will be preserved.")
+            st.info(
+                "Upload a mask image where white areas will be inpainted and black areas will be preserved."
+            )
 
             uploaded_mask = st.file_uploader(
                 "Upload mask image",
@@ -242,12 +256,16 @@ if uploaded_image is not None:
             if uploaded_mask is not None:
                 mask_image = Image.open(uploaded_mask).convert("L")
                 if mask_image.size != input_image.size:
-                    st.warning(f"Mask size ({mask_image.size}) doesn't match image size ({input_image.size}). Resizing...")
-                    mask_image = mask_image.resize(input_image.size, Image.Resampling.LANCZOS)
-                st.image(mask_image, width='content')
+                    st.warning(
+                        f"Mask size ({mask_image.size}) doesn't match image size ({input_image.size}). Resizing..."
+                    )
+                    mask_image = mask_image.resize(
+                        input_image.size, Image.Resampling.LANCZOS
+                    )
+                st.image(mask_image, width="content")
             elif mask_image is not None:
                 st.info("Using mask from freeform tab...")
-                st.image(mask_image, width='content')
+                st.image(mask_image, width="content")
             else:
                 st.info("Please upload a mask image to mark areas for inpainting")
 
@@ -267,14 +285,21 @@ if uploaded_image is not None:
 
         # Settings section
         with st.expander("Inpainting Settings..."):
-            guidance = st.slider("Guidance Scale", value=7.0, min_value=0.0, max_value=50.0, step=0.1)
+            guidance = st.slider(
+                "Guidance Scale", value=7.0, min_value=0.0, max_value=50.0, step=0.1
+            )
             inference_steps = st.number_input("Inference Steps", value=20, min_value=1)
 
             with st.container(border=True):
                 sched, seedbox = st.columns([1, 1])
-                scheduler_type = sched.selectbox("Noise Scheduler", options=schedulers, index=0)
+                scheduler_type = sched.selectbox(
+                    "Noise Scheduler", options=schedulers, index=0
+                )
                 seed = seedbox.number_input(
-                    "Random Seed", min_value=-1, max_value=None, step=1,
+                    "Random Seed",
+                    min_value=-1,
+                    max_value=None,
+                    step=1,
                     help="Generation Seed. -1 Means Random Seed",
                 )
 
@@ -283,13 +308,19 @@ if uploaded_image is not None:
         gen_info_col, gen_btn_col = st.columns([2, 1])
 
         with gen_info_col:
-            st.markdown(f"**Inpaint using model {model_metadata.get('model_checkpoint')}**.")
+            st.markdown(
+                f"**Inpaint using model {model_metadata.get('model_checkpoint')}**."
+            )
 
         with gen_btn_col:
-            submit_button = st.button("Inpaint", type="primary", disabled=(mask_image is None))
+            submit_button = st.button(
+                "Inpaint", type="primary", disabled=(mask_image is None)
+            )
 
         if submit_button and mask_image is not None:
-            with st.spinner(f"Loading Stable Diffusion Inpaint Model {model_metadata.get('model_checkpoint')}..."):
+            with st.spinner(
+                f"Loading Stable Diffusion Inpaint Model {model_metadata.get('model_checkpoint')}..."
+            ):
                 sd_generator = load_sd15_model(model_metadata.get("model_path"))
                 sd_generator.loadSDInpaintPipeline()
 
@@ -298,7 +329,9 @@ if uploaded_image is not None:
 
             if override_vae and vae_metadata:
                 with st.spinner(f"Loading VAE {vae_metadata.get('vae_path')}..."):
-                    sd_generator.inpaint_pipeline.vae = load_custom_vae(vae_metadata.get("vae_path"))
+                    sd_generator.inpaint_pipeline.vae = load_custom_vae(
+                        vae_metadata.get("vae_path")
+                    )
 
             with st.spinner(f"Moving pipeline to device: {sd_generator.accelerator}"):
                 sd_generator.pipeToConfiguredDevice()
@@ -325,7 +358,7 @@ if uploaded_image is not None:
 
             with result_col1:
                 st.markdown("**Inpainted Result**")
-                st.image(output_image, width='content')
+                st.image(output_image, width="content")
 
             with result_col2:
                 st.markdown("**Generation Parameters**")
@@ -334,7 +367,9 @@ if uploaded_image is not None:
                     "loras": [
                         {
                             "lora_name": lora_metadata.get(l, {}).get("name"),
-                            "merge_strength": lora_metadata.get(l, {}).get("merge_strength"),
+                            "merge_strength": lora_metadata.get(l, {}).get(
+                                "merge_strength"
+                            ),
                         }
                         for l in lora_metadata
                     ],
