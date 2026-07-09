@@ -1,85 +1,87 @@
 #!/usr/bin/env python
-#
-# Stable Diffusion Web App
-# Streamlit version
-#
+"""
+Stable Diffusion Web Application
+
+A Streamlit-based web interface for Stable Diffusion image generation.
+Supports SD1.5 and SDXL models for text-to-image, inpainting, and model merging.
+"""
 
 import os
-from datetime import datetime
-import json
+from pathlib import Path
 
-try:
-    import streamlit as st
-    from dotenv import dotenv_values
-except Exception as e:
-    print(f"Caught fatal exception: {e}")
+import streamlit as st
 
-# local imports
-from libs.shared.settings import Properties
+from libs.shared.logging_config import setup_logging
+from libs.shared.config import get_app_config
 
-# load environment
-config_env: dict = dotenv_values(".env")
+# Initialize logging before any other imports that might use it
+setup_logging(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    log_file=Path("logs/sd_webapp.log") if os.getenv("LOG_TO_FILE") else None,
+)
 
-# load app settings
-config_filename: str = config_env.get("CONFIG_FILE", "parameters.yaml")
-appSettings = Properties(config_file=config_filename)
 
-# MAIN
-if __name__ == "__main__":
-    # load logo
+def main():
+    """Initialize and run the Stable Diffusion web application."""
+    # Load configuration (cached)
+    config = get_app_config()
+    
+    # Load logo
     st.logo("assets/redhat.png")
-
-    # define app pages
-    sd15_page = st.Page(
-        "pages/sd15_page.py",
-        title="Stable Diffusion 1.5",
-        icon=":material/chat:"
-    )
-    sd15_inpaint_page = st.Page(
-        "pages/sd15_inpaint_page.py",
-        title="SD15 Inpainting",
-        icon=":material/edit:"
-    )
-    sdxl_page = st.Page(
-        "pages/sdxl_page.py",
-        title="Stable Diffusion XL",
-        icon=":material/chat:"
-    )
-    sdxl_inpaint_page = st.Page(
-        "pages/sdxl_inpaint_page.py",
-        title="SDXL Inpainting",
-        icon=":material/edit:"
-    )
-    sd15_checkpoint_tools_page = st.Page(
-        "pages/sd15_tools_page.py",
-        title="SD15 Checkpoint Tools",
-        icon=":material/settings:",
-    )
-    sdxl_checkpoint_tools_page = st.Page(
-        "pages/sdxl_tools_page.py",
-        title="SDXL Checkpoint Tools",
-        icon=":material/settings:",
-    )
-    enabled_sections = {
+    
+    # Define application pages
+    pages = {
         "Txt2Img": [
-            sd15_page,
-            sdxl_page,
+            st.Page(
+                "pages/sd15_page.py",
+                title="Stable Diffusion 1.5",
+                icon=":material/chat:",
+            ),
+            st.Page(
+                "pages/sdxl_page.py",
+                title="Stable Diffusion XL",
+                icon=":material/chat:",
+            ),
         ],
         "Inpainting": [
-            sd15_inpaint_page,
-            sdxl_inpaint_page,
+            st.Page(
+                "pages/sd15_inpaint_page.py",
+                title="SD15 Inpainting",
+                icon=":material/edit:",
+            ),
+            st.Page(
+                "pages/sdxl_inpaint_page.py",
+                title="SDXL Inpainting",
+                icon=":material/edit:",
+            ),
         ],
         "Model Merging": [
-            sd15_checkpoint_tools_page,
-            sdxl_checkpoint_tools_page,
+            st.Page(
+                "pages/sd15_tools_page.py",
+                title="SD15 Checkpoint Tools",
+                icon=":material/settings:",
+            ),
+            st.Page(
+                "pages/sdxl_tools_page.py",
+                title="SDXL Checkpoint Tools",
+                icon=":material/settings:",
+            ),
         ],
     }
-
-    # setup application main page
-    pg = st.navigation(enabled_sections)
+    
+    # Setup navigation
+    navigation = st.navigation(pages)
+    
+    # Configure page settings
     st.set_page_config(
-        page_title="Stable Diffusion WebApp", layout="wide", page_icon=":material/edit:"
+        page_title="Stable Diffusion WebApp",
+        layout="wide",
+        page_icon=":material/edit:",
     )
+    
+    # Run the selected page
+    navigation.run()
 
-    # run app
-    pg.run()
+
+if __name__ == "__main__":
+    main()

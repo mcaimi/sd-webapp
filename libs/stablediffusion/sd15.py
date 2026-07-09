@@ -1,399 +1,92 @@
 #!/usr/bin/env python
+"""
+Stable Diffusion 1.5 Pipeline Generator
 
-# load libs
-try:
-    import numpy as np
-    from torch import Generator
-    from diffusers import StableDiffusionPipeline, StableDiffusionInpaintPipeline, AutoencoderKL, UNet2DConditionModel
-    from libs.globals.vars import RANDOM_BIT_LENGTH, schedulers
-    from libs.shared.utils import get_gpu
-    from libs.stablediffusion.funcs import get_random_seed
-    from pathlib import PosixPath
-    from PIL import Image
-except Exception as e:
-    print(f"Caught exception: {e}")
-    raise e
+Provides SD1.5-specific implementation of the base pipeline generator.
+"""
 
-# An example JSON payload:
-#
-# // example payload:
-#  {
-#    "instances": [
-#      {
-#        "prompt": "photo of the beach",
-#        "negative_prompt": "ugly, deformed, bad anatomy",
-#        "num_inference_steps": 20,
-#        "width": 512,
-#        "height": 512,
-#        "guidance_scale": 7,
-#        "seed": 772847624537827,
-#      }
-#    ]
-#  }
+import logging
+from typing import Dict, Tuple, Optional
+
+from diffusers import StableDiffusionPipeline, StableDiffusionInpaintPipeline
+
+from libs.stablediffusion.base import (
+    BasePipelineGenerator,
+    load_custom_vae,
+    load_custom_unet,
+    gen_noise,
+    format_metadata,
+)
+
+logger = logging.getLogger(__name__)
 
 
-# prepare the payload
-def format_metadata(
-    prompt,
-    negative_prompt="",
-    steps=10,
-    width=512,
-    height=512,
-    cfg=7,
-    seed=-1,
-    scheduler=None,
-):
-    # prepare seed
-    if seed == -1:
-        custom_seed = get_random_seed(RANDOM_BIT_LENGTH)
-        print(f"Generating with random seed: {custom_seed}")
-    else:
-        custom_seed = seed
-        print(f"Generating with constant seed: {custom_seed}")
-
-    # prepare payload
-    json_data = {
-        "instances": [
-            {
-                "prompt": prompt,
-                "negative_prompt": negative_prompt,
-                "num_inference_steps": steps,
-                "width": width,
-                "height": height,
-                "guidance_scale": cfg,
-                "seed": custom_seed,
-                "scheduler": scheduler,
-            }
-        ]
-    }
-
-    # return built payload
-    return json_data
+# Re-export for backward compatibility
+__all__ = [
+    "SD15PipelineGenerator",
+    "load_custom_vae",
+    "load_custom_unet",
+    "gen_noise",
+    "format_metadata",
+]
 
 
-# callback for sd generation on a local machine
-def local_prediction(
-    model_pipeline,
-    prompt,
-    negative_prompt="",
-    steps=10,
-    width=512,
-    height=512,
-    guidance_scale=7,
-    seed=-1,
-    scheduler=None,
-    accelerator="cpu",
-):
-    # prepare generator object
-    if seed == -1:
-        gen = Generator(accelerator).manual_seed(get_random_seed(RANDOM_BIT_LENGTH))
-    else:
-        gen = Generator(accelerator).manual_seed(seed)
+class SD15PipelineGenerator(BasePipelineGenerator):
+    """SD1.5 Pipeline Generator for text-to-image and inpainting."""
 
-    # generate image from prompt
-    prediction = model_pipeline(
-        prompt=prompt,
-        negative_prompt=negative_prompt,
-        num_inference_steps=steps,
-        width=width,
-        height=height,
-        guidance_scale=guidance_scale,
-        generator=gen,
-    )
+    PIPELINE_CLASS = StableDiffusionPipeline
+    INPAINT_PIPELINE_CLASS = StableDiffusionInpaintPipeline
+    DEFAULT_WIDTH = 512
+    DEFAULT_HEIGHT = 512
+    MODEL_TYPE = "sd15"
 
-    # generation metagada payload
-    metadata = format_metadata(
-        prompt=prompt,
-        negative_prompt=negative_prompt,
-        steps=steps,
-        width=width,
-        height=height,
-        cfg=guidance_scale,
-        seed=seed,
-        scheduler=scheduler,
-    )
-
-    return np.array(prediction.images[0]), metadata
-
-
-# callback for inpainting on a local machine
-def local_inpaint_prediction(
-    model_pipeline,
-    prompt,
-    image,
-    mask_image,
-    negative_prompt="",
-    steps=10,
-    guidance_scale=7,
-    seed=-1,
-    scheduler=None,
-    accelerator="cpu",
-):
-    # prepare generator object
-    if seed == -1:
-        gen = Generator(accelerator).manual_seed(get_random_seed(RANDOM_BIT_LENGTH))
-    else:
-        gen = Generator(accelerator).manual_seed(seed)
-
-    # ensure image and mask are PIL Images
-    if isinstance(image, np.ndarray):
-        image = Image.fromarray((image * 255).astype(np.uint8) if image.max() <= 1.0 else image.astype(np.uint8))
-    if isinstance(mask_image, np.ndarray):
-        mask_image = Image.fromarray((mask_image * 255).astype(np.uint8) if mask_image.max() <= 1.0 else mask_image.astype(np.uint8))
-    
-    # convert mask to grayscale if needed
-    if mask_image.mode != "L":
-        mask_image = mask_image.convert("L")
-
-    # generate inpainted image
-    prediction = model_pipeline(
-        prompt=prompt,
-        negative_prompt=negative_prompt,
-        image=image,
-        mask_image=mask_image,
-        num_inference_steps=steps,
-        guidance_scale=guidance_scale,
-        generator=gen,
-    )
-
-    # generation metadata payload
-    metadata = format_metadata(
-        prompt=prompt,
-        negative_prompt=negative_prompt,
-        steps=steps,
-        width=image.width,
-        height=image.height,
-        cfg=guidance_scale,
-        seed=seed,
-        scheduler=scheduler,
-    )
-    metadata["inpainting"] = True
-
-    return np.array(prediction.images[0]), metadata
-
-
-# generate sample noise
-def gen_noise(width: int = 512, height: int = 512, channels: int = 3):
-    noise_image = np.random.rand(width, height, channels)
-    noise_properties = {
-        "width": width,
-        "height": height,
-        "channels": channels,
-        "generation": {
-            "status": "idle",
-            "output": "noise matrix",
-        },
-    }
-    return noise_image, noise_properties
-
-
-# load custom UNET weights
-def load_custom_unet(ckpt: str | PosixPath) -> UNet2DConditionModel:
-    try:
-        if type(ckpt) is str:
-            fname = ckpt
-        elif type(ckpt) is PosixPath:
-            fname = ckpt.absolute()
-        else:
-            raise Exception(
-                "load_custom_unet(): filename must be a string or Path object"
-            )
-
-        # load the UNet Model from checkpoint
-        _unet = UNet2DConditionModel.from_single_file(
-            fname, subfolder="unet", use_safetensors=True
-        )
-        return _unet
-    except Exception as e:
-        raise (e)
-
-
-# load custom Variational Autoencoder
-def load_custom_vae(ckpt: str | PosixPath) -> AutoencoderKL:
-    try:
-        if type(ckpt) is str:
-            fname = ckpt
-        elif type(ckpt) is PosixPath:
-            fname = ckpt.absolute()
-        else:
-            raise Exception(
-                "load_custom_vae(): filename must be a string or Path object"
-            )
-
-        # load the vae from checkpoint
-        print(f"Loading custom VAE {ckpt}")
-        _vae = AutoencoderKL.from_single_file(
-            fname, subfolder="vae", use_safetensors=True
-        )
-        return _vae
-    except Exception as e:
-        raise (e)
-
-
-# SD1.5 Generator Class
-class SD15PipelineGenerator:
-    def __init__(self, model_checkpoint: str):
-        self.model_checkpoint = model_checkpoint
-        self.sd_pipeline = None
-        self.inpaint_pipeline = None
-
-    # generation callback
-    def forward(
-        self,
-        positive_prompt,
-        negative_prompt,
-        scheduler_type,
-        steps,
-        width,
-        height,
-        cfg,
-        seed,
-    ):
-        # check if model is ready
-        if self.sd_pipeline is None:
-            import numpy as np
-
-            return np.random.rand(width, height, 3), {
-                "generation": {"status": "no model loaded", "output": "noise matrix"}
-            }
-        else:
-            # call local callback function
-            print(f"Using Scheduler {scheduler_type}")
-            self.sd_pipeline.scheduler = schedulers.get(scheduler_type).from_config(
-                self.sd_pipeline.scheduler.config
-            )
-            return local_prediction(
-                self.sd_pipeline,
-                prompt=positive_prompt,
-                negative_prompt=negative_prompt,
-                steps=steps,
-                width=width,
-                height=height,
-                seed=seed,
-                guidance_scale=cfg,
-                scheduler=scheduler_type,
-                accelerator=self.accelerator,
-            )
-
-    # return scheduler config
-    def getSchedulerConfig(self):
-        if self.inpaint_pipeline is not None:
-            return self.inpaint_pipeline.scheduler.config
-        elif self.sd_pipeline is not None:
-            return self.sd_pipeline.scheduler.config
-        else:
-            return None
-
-    # load stable diffusion model from disk
-    def loadSDPipeline(self):
-        # check for GPU
-        try:
-            self.accelerator, self.dtype = get_gpu()
-            print(f"Loading SD Checkpoint {self.model_checkpoint}")
-            self.sd_pipeline = StableDiffusionPipeline.from_single_file(
-                self.model_checkpoint, torch_dtype=self.dtype, use_safetensors=True
-            )
-        except Exception as e:
-            raise Exception(f"Caught Exception {e}", duration=5)
-
-    # load lora adapters
-    def addLorasToPipeline(self, loras: dict = None):
-        assert loras is not None
-
-        # extract checkpoint files
-        lora_checkpoints = [loras[k] for k in loras.keys()]
-
-        # add low rank adapter weights
-        if lora_checkpoints is not None:
-            for entry in lora_checkpoints:
-                weightsfile = PosixPath(entry.get("lora_path"))
-                strength = entry.get("merge_strength")
-                print(f"Loading Lora: {weightsfile}, fusion strength: {strength}")
-                if self.sd_pipeline is not None:
-                    self.sd_pipeline.load_lora_weights(
-                        weightsfile,
-                        adapter_name=f"name_{weightsfile.name.split('.')[0]}",
-                    )
-                    # merge lora
-                    self.sd_pipeline.fuse_lora(
-                        lora_scale=strength,
-                        adapter_name=f"name_{weightsfile.name.split('.')[0]}",
-                    )
-                if self.inpaint_pipeline is not None:
-                    self.inpaint_pipeline.load_lora_weights(
-                        weightsfile,
-                        adapter_name=f"name_{weightsfile.name.split('.')[0]}",
-                    )
-                    # merge lora
-                    self.inpaint_pipeline.fuse_lora(
-                        lora_scale=strength,
-                        adapter_name=f"name_{weightsfile.name.split('.')[0]}",
-                    )
-                if self.sd_pipeline is None and self.inpaint_pipeline is None:
-                    raise Exception("SD Model is not loaded")
-
-    # send to accelerator
-    def pipeToConfiguredDevice(self):
-        # send model pipeline to the appropriate compute device
-        if self.sd_pipeline is not None:
-            self.sd_pipeline.to(self.accelerator)
-        if self.inpaint_pipeline is not None:
-            self.inpaint_pipeline.to(self.accelerator)
-
-    # inpainting callback
-    def forward_inpaint(
-        self,
-        positive_prompt,
-        negative_prompt,
-        image,
-        mask_image,
-        scheduler_type,
-        steps,
-        cfg,
-        seed,
-    ):
-        # check if model is ready
-        if self.inpaint_pipeline is None:
-            import numpy as np
-            return np.random.rand(512, 512, 3), {
-                "generation": {"status": "no inpainting model loaded", "output": "noise matrix"}
-            }
-        else:
-            # call local inpainting callback function
-            print(f"Using Scheduler {scheduler_type} for inpainting")
-            self.inpaint_pipeline.scheduler = schedulers.get(scheduler_type).from_config(
-                self.inpaint_pipeline.scheduler.config
-            )
-            return local_inpaint_prediction(
-                self.inpaint_pipeline,
-                prompt=positive_prompt,
-                image=image,
-                mask_image=mask_image,
-                negative_prompt=negative_prompt,
-                steps=steps,
-                seed=seed,
-                guidance_scale=cfg,
-                scheduler=scheduler_type,
-                accelerator=self.accelerator,
-            )
-
-    # load stable diffusion inpainting pipeline from disk
-    def loadSDInpaintPipeline(self):
-        # check for GPU
-        try:
-            self.accelerator, self.dtype = get_gpu()
-            print(f"Loading SD Inpaint Checkpoint {self.model_checkpoint}")
-            self.inpaint_pipeline = StableDiffusionInpaintPipeline.from_single_file(
-                self.model_checkpoint, torch_dtype=self.dtype, use_safetensors=True
-            )
-        except Exception as e:
-            raise Exception(f"Caught Exception {e}", duration=5)
-
-    # get common SD15 resolutions
     @staticmethod
-    def get_sd15_resolutions():
+    def get_resolutions() -> Dict[str, Tuple[int, int]]:
+        """Return supported SD1.5 resolutions."""
         return {
             "512x512": (512, 512),
             "512x768": (512, 768),
             "768x512": (768, 512),
         }
+
+    # Alias for backward compatibility
+    @staticmethod
+    def get_sd15_resolutions() -> Dict[str, Tuple[int, int]]:
+        """Return supported SD1.5 resolutions (legacy alias)."""
+        return SD15PipelineGenerator.get_resolutions()
+
+    def loadPipeline(self) -> None:
+        """Load the SD1.5 generation pipeline."""
+        self._init_device()
+        logger.info("Loading SD1.5 checkpoint: %s", self.model_checkpoint)
+        self.pipeline = StableDiffusionPipeline.from_single_file(
+            self.model_checkpoint, torch_dtype=self.dtype, use_safetensors=True
+        )
+
+    # Alias for backward compatibility
+    def loadSDPipeline(self) -> None:
+        """Load the SD1.5 pipeline (legacy alias)."""
+        self.loadPipeline()
+
+    def loadInpaintPipeline(self) -> None:
+        """Load the SD1.5 inpainting pipeline."""
+        self._init_device()
+        logger.info("Loading SD1.5 inpaint checkpoint: %s", self.model_checkpoint)
+        self.inpaint_pipeline = StableDiffusionInpaintPipeline.from_single_file(
+            self.model_checkpoint, torch_dtype=self.dtype, use_safetensors=True
+        )
+
+    # Alias for backward compatibility
+    def loadSDInpaintPipeline(self) -> None:
+        """Load the SD1.5 inpainting pipeline (legacy alias)."""
+        self.loadInpaintPipeline()
+
+    # Legacy property aliases
+    @property
+    def sd_pipeline(self) -> Optional[StableDiffusionPipeline]:
+        """Legacy alias for pipeline."""
+        return self.pipeline
+
+    @sd_pipeline.setter
+    def sd_pipeline(self, value: Optional[StableDiffusionPipeline]) -> None:
+        self.pipeline = value

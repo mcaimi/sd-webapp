@@ -1,130 +1,111 @@
 #!/usr/bin/env python
-#
-# Stable Diffusion 1.5 Generation Page
-#
+"""
+Stable Diffusion XL Generation Page
 
-try:
-    import streamlit as st
-    from dotenv import dotenv_values
-    import json
+Provides text-to-image generation using SDXL models with:
+- Model and LoRA selection
+- Custom VAE support
+- Batch generation
+- Model comparison mode
+"""
 
-    with st.spinner("** LOADING INTERFACE... **"):
-        # local imports
-        from libs.shared.settings import Properties
-        from libs.shared.utils import (
-            enumerate_models,
-            read_safetensors_header,
-            check_or_create_path,
-            get_gpu,
-            random_string
-        )
-        from libs.globals.vars import RANDOM_BIT_LENGTH
-        from libs.stablediffusion.funcs import get_random_seed
-        from libs.stablediffusion.sdxl import (
-            gen_noise,
-            load_custom_vae,
-            SDXLPipelineGenerator,
-        )
-        from libs.stablediffusion.metadata import GenerationMetadata
-        from libs.globals.vars import schedulers
-except Exception as e:
-    print(f"Caught fatal exception: {e}")
+import json
 
-# load environment
-config_env: dict = dotenv_values(".env")
+import streamlit as st
 
-# load app settings
-config_filename: str = config_env.get("CONFIG_FILE", "parameters.yaml")
-appSettings = Properties(config_file=config_filename)
+from libs.shared.config import get_app_config
+from libs.shared.utils import enumerate_models, read_safetensors_header
+from libs.shared.models import GenerationSettings
+from libs.shared.ui.generation import (
+    create_prompt_inputs,
+)
+from libs.shared.ui.display import reset_streamlit_cache, display_generation_results
+from libs.stablediffusion.sdxl import SDXLPipelineGenerator, load_custom_vae
+from libs.stablediffusion.metadata import GenerationMetadata
+from libs.globals.vars import schedulers, RANDOM_BIT_LENGTH
+from libs.stablediffusion.funcs import get_random_seed
+from libs.shared.utils import get_gpu
 
-# load header
+
+# Configuration
+MODEL_TYPE = "sdxl"
+config = get_app_config()
+
+# Load header
 st.html("assets/sdxl_header.html")
 
-# paths sanity check
-appSettings.setup_paths()
 
-
-# reset object cache
 def reset_model_cache() -> None:
-    st.cache_resource.clear()
+    """Clear cached models when selection changes."""
+    reset_streamlit_cache()
 
 
-# load model and associated resources
 @st.cache_resource
-def load_sdxl_model(requested_model):
-    return SDXLPipelineGenerator(model_checkpoint=requested_model)
+def load_sdxl_model(model_path):
+    """Load and cache an SDXL model."""
+    return SDXLPipelineGenerator(model_checkpoint=model_path)
 
 
-# populate sidebar
+# === SIDEBAR ===
 with st.sidebar:
-    # select model
+    # Model selection
+    model_options = enumerate_models(config.checkpoints_sdxl_path)
     selected_model = st.selectbox(
         label="Select SDXL Model",
-        options=enumerate_models(
-            appSettings.config_parameters.checkpoints.sdxl.path
-        ).keys(),
+        options=list(model_options.keys()),
         index=0,
         on_change=reset_model_cache,
     )
 
-    # show model metadata
-    with st.spinner("Loading Model Metadata...."):
+    # Load model metadata
+    with st.spinner("Loading Model Metadata..."):
         try:
             model_metadata = {
                 "model_checkpoint": selected_model,
-                "model_path": enumerate_models(
-                    appSettings.config_parameters.checkpoints.sdxl.path
-                )
-                .get(selected_model)
-                .absolute(),
-                "metadata": read_safetensors_header(
-                    enumerate_models(
-                        appSettings.config_parameters.checkpoints.sdxl.path
-                    ).get(selected_model)
-                ),
+                "model_path": model_options.get(selected_model).absolute()
+                if selected_model
+                else None,
+                "metadata": read_safetensors_header(model_options.get(selected_model))
+                if selected_model
+                else {},
             }
-        except:
+        except Exception:
             model_metadata = {
                 "model_checkpoint": "unavailable",
                 "model_path": None,
                 "metadata": {},
             }
 
-    # select lora
+    # LoRA selection
+    lora_options = enumerate_models(config.loras_sdxl_path)
     selected_lora = st.multiselect(
         label="Select SDXL Lora",
-        options=enumerate_models(appSettings.config_parameters.loras.sdxl.path),
+        options=list(lora_options.keys()),
         max_selections=5,
         default=[],
         on_change=reset_model_cache,
     )
 
-    # show lora metadata
-    with st.spinner("Loading Lora Metadata...."):
+    # LoRA metadata and strength sliders
+    with st.spinner("Loading Lora Metadata..."):
         lora_metadata = {}
-        for i, l in enumerate(selected_lora):
+        for i, lora_name in enumerate(selected_lora):
             try:
+                lora_path = lora_options.get(lora_name)
                 lora_metadata[f"lora_{i}"] = {
-                    "name": l,
-                    "lora_path": enumerate_models(
-                        appSettings.config_parameters.loras.sdxl.path
-                    )
-                    .get(l)
-                    .absolute(),
+                    "name": lora_name,
+                    "lora_path": lora_path.absolute() if lora_path else None,
                     "merge_strength": st.slider(
-                        label=f"{l} merge strength",
+                        label=f"{lora_name} merge strength",
                         min_value=0.0,
                         max_value=1.0,
                         value=0.2,
                         step=0.1,
+                        key=f"lora_strength_{i}",
                     ),
-                    "metadata": read_safetensors_header(
-                        enumerate_models(appSettings.config_parameters.loras.sdxl.path).get(
-                            l
-                        )
-                    ),
+                    "metadata": read_safetensors_header(lora_path) if lora_path else {},
                 }
-            except:
+            except Exception:
                 lora_metadata[f"lora_{i}"] = {
                     "name": "not available",
                     "lora_path": None,
@@ -132,108 +113,112 @@ with st.sidebar:
                     "metadata": {},
                 }
 
-    # select vae
+    # VAE selection
     override_vae = st.checkbox("Override VAE", value=False, on_change=reset_model_cache)
+    vae_metadata = None
     if override_vae:
+        vae_options = enumerate_models(config.vae_sdxl_path)
         selected_vae = st.selectbox(
-            label="Select SD15 VAE",
-            options=enumerate_models(
-                appSettings.config_parameters.vae.sdxl.path
-            ).keys(),
+            label="Select SDXL VAE",
+            options=list(vae_options.keys()),
             index=0,
             on_change=reset_model_cache,
         )
 
-        # show model metadata
-        with st.spinner("Loading VAE Metadata...."):
+        with st.spinner("Loading VAE Metadata..."):
             try:
+                vae_path = vae_options.get(selected_vae)
                 vae_metadata = {
                     "vae_checkpoint": selected_vae,
-                    "vae_path": enumerate_models(
-                        appSettings.config_parameters.vae.sdxl.path
-                    )
-                    .get(selected_vae)
-                    .absolute(),
-                    "metadata": read_safetensors_header(
-                        enumerate_models(appSettings.config_parameters.vae.sdxl.path).get(
-                            selected_vae
-                        )
-                    ),
+                    "vae_path": vae_path.absolute() if vae_path else None,
+                    "metadata": read_safetensors_header(vae_path) if vae_path else {},
                 }
-            except:
+            except Exception:
                 vae_metadata = {
                     "vae_checkpoint": "unavailable",
                     "vae_path": None,
                     "metadata": {},
                 }
 
-# main page
+
+# === MAIN PAGE ===
 st.markdown("### **Stable Diffusion Generation Page, XL**")
 st.markdown("*Generate images using Stable Diffusion XL models.*")
 
-# common features
-pprompt: str = ""
-nprompt: str = ""
-gscale: float = 7.0
-num_inference_steps: int = 20
-owidth: int = 832
-oheight: int = 1216
-oseed: int = -1
-oscheduler: int = 0
-
-# load previous generation parameters
-prev_gen_metadata = st.file_uploader("Load Inference Parameters from file...", accept_multiple_files=False, type="json")
-if prev_gen_metadata is not None:
-    prev_metadata = GenerationMetadata(json.load(prev_gen_metadata))
-
-    # set values
-    pprompt = prev_metadata.prompt or pprompt
-    nprompt = prev_metadata.negative_prompt or nprompt
-    gscale = prev_metadata.guidance_scale or gscale
-    num_inference_steps = prev_metadata.num_inference_steps or num_inference_steps
-    owidth = prev_metadata.width or owidth
-    oheight = prev_metadata.height or oheight
-    oseed = prev_metadata.seed or oseed
-    # select scheduler
-    oscheduler = [s for s in schedulers.keys()].index(prev_metadata.scheduler) or oscheduler
-
-# image generate
-# align text prompts on the left
-positive_prompt = st.text_area(
-    "Positive Prompt", value=pprompt, placeholder="Write here what you want in the image"
-)
-negative_prompt = st.text_area(
-    "Negative Prompt", value=nprompt, placeholder="Write here what you don't want in the image"
+# Default settings (SDXL uses larger default resolution)
+defaults = GenerationSettings(
+    width=832,
+    height=1216,
+    inference_steps=20,
+    guidance_scale=7.0,
+    seed=-1,
+    scheduler_index=0,
 )
 
-# settings section
+# Load previous generation parameters
+prev_gen_file = st.file_uploader(
+    "Load Inference Parameters from file...",
+    accept_multiple_files=False,
+    type="json",
+)
+if prev_gen_file is not None:
+    prev_metadata = GenerationMetadata(json.load(prev_gen_file))
+    defaults.positive_prompt = prev_metadata.prompt or ""
+    defaults.negative_prompt = prev_metadata.negative_prompt or ""
+    defaults.guidance_scale = prev_metadata.guidance_scale or defaults.guidance_scale
+    defaults.inference_steps = (
+        prev_metadata.num_inference_steps or defaults.inference_steps
+    )
+    defaults.width = prev_metadata.width or defaults.width
+    defaults.height = prev_metadata.height or defaults.height
+    defaults.seed = prev_metadata.seed or defaults.seed
+    try:
+        defaults.scheduler_index = list(schedulers.keys()).index(
+            prev_metadata.scheduler
+        )
+    except (ValueError, AttributeError):
+        pass
+
+# Prompt inputs
+positive_prompt, negative_prompt = create_prompt_inputs(
+    defaults.positive_prompt,
+    defaults.negative_prompt,
+)
+
+# Generation settings
 with st.expander("Generation Settings..."):
     guidance = st.slider(
-        "Guidance Scale", value=gscale, min_value=0.0, max_value=50.0, step=0.1
+        "Guidance Scale",
+        value=defaults.guidance_scale,
+        min_value=0.0,
+        max_value=50.0,
+        step=0.1,
     )
     with st.container(border=True):
         w, h = st.columns([1, 1])
-        width = w.number_input("Image Width", value=owidth)
-        height = h.number_input("Image Height", value=oheight)
+        width = w.number_input("Image Width", value=defaults.width)
+        height = h.number_input("Image Height", value=defaults.height)
 
-    inference_steps = st.number_input("Inference Steps", value=num_inference_steps)
+    inference_steps = st.number_input("Inference Steps", value=defaults.inference_steps)
 
     with st.container(border=True):
         batch_size = st.number_input("Batch Size", min_value=1, value=1)
 
     with st.container(border=True):
         sched, seedbox = st.columns([1, 1])
-        scheduler_type = sched.selectbox("Noise Scheduler", options=schedulers, index=oscheduler)
+        scheduler_type = sched.selectbox(
+            "Noise Scheduler", options=schedulers, index=defaults.scheduler_index
+        )
         seed = seedbox.number_input(
             "Random Seed",
             min_value=-1,
             max_value=None,
-            value=oseed,
+            value=defaults.seed,
             step=1,
             help="Generation Seed. -1 Means Random Seed",
         )
 
-# application tabs
+# === TABS ===
 image_gen_tab, model_comparison_tab = st.tabs(["Image Generation", "Model Comparison"])
 
 with image_gen_tab:
@@ -247,37 +232,35 @@ with image_gen_tab:
     with gen_btn_col:
         submit_button = st.button("Generate", type="primary")
 
-    # generate new image
     if submit_button:
-        # load model..
         with st.spinner(
             f"Loading Stable Diffusion Model {model_metadata.get('model_checkpoint')}..."
         ):
             sd_generator = load_sdxl_model(model_metadata.get("model_path"))
             sd_generator.loadSDXLPipeline()
 
-        with st.spinner(f"Merging LoRA Adapters..."):
+        with st.spinner("Merging LoRA Adapters..."):
             sd_generator.addLorasToPipeline(loras=lora_metadata)
 
-        if override_vae:
+        if override_vae and vae_metadata:
             with st.spinner(f"Loading VAE {vae_metadata.get('vae_path')}..."):
-                sd_generator.vae = load_custom_vae(vae_metadata.get("vae_path"))
+                sd_generator.pipeline.vae = load_custom_vae(
+                    vae_metadata.get("vae_path")
+                )
 
         with st.spinner(f"Moving pipeline to device: {sd_generator.accelerator}"):
             sd_generator.pipeToConfiguredDevice()
 
-        # run inference
+        # Run inference
         generated_pixmaps = []
-        if (batch_size > 1) and (seed > 0):
+        if batch_size > 1 and seed > 0:
             st.warning(
-                f"Seed {seed} is constant and batch size is: {batch_size}: Images will be all the same..."
+                f"Seed {seed} is constant and batch size is {batch_size}: Images will be identical."
             )
 
         for i in range(batch_size):
-            # get seed
-            gen_seed = seed if (seed > 0) else get_random_seed(RANDOM_BIT_LENGTH)
-            # generate
-            with st.spinner(f"Generating image ... {i + 1}/{batch_size}"):
+            gen_seed = seed if seed > 0 else get_random_seed(RANDOM_BIT_LENGTH)
+            with st.spinner(f"Generating image {i + 1}/{batch_size}..."):
                 output_image, output_parameters = sd_generator.forward(
                     positive_prompt=positive_prompt,
                     negative_prompt=negative_prompt,
@@ -289,7 +272,6 @@ with image_gen_tab:
                     cfg=guidance,
                 )
                 scheduler_config = sd_generator.getSchedulerConfig()
-            # append image to list
             generated_pixmaps.append(
                 (output_image, output_parameters, scheduler_config, gen_seed)
             )
@@ -299,16 +281,13 @@ with model_comparison_tab:
 
     with comp_info_col:
         st.markdown(
-            f"**Generate images with consistent parameters across selected models.**"
+            "**Generate images with consistent parameters across selected models.**"
         )
-        # multiple models selection
         target_models = st.multiselect(
             label="Select target models",
             max_selections=6,
-            help="Generate image using the same settings across different models to compare checkpoints",
-            options=enumerate_models(
-                appSettings.config_parameters.checkpoints.sdxl.path
-            ),
+            help="Generate image using the same settings across different models",
+            options=list(model_options.keys()),
             default=[],
         )
 
@@ -318,32 +297,28 @@ with model_comparison_tab:
         )
 
     if gen_button:
-        # images holder
         generated_pixmaps = []
-        # generate seed
-        gen_seed = seed if (seed > 0) else get_random_seed(RANDOM_BIT_LENGTH)
+        gen_seed = seed if seed > 0 else get_random_seed(RANDOM_BIT_LENGTH)
 
-        # iterate over models
         for i, model in enumerate(target_models):
-            # set model name
             model_metadata["model_checkpoint"] = model
-            ckpt = enumerate_models(
-                appSettings.config_parameters.checkpoints.sdxl.path
-            ).get(model)
+            ckpt = model_options.get(model)
             pipeline = load_sdxl_model(ckpt.absolute())
             pipeline.loadSDXLPipeline()
 
-            with st.spinner(f"Merging LoRA Adapters..."):
+            with st.spinner("Merging LoRA Adapters..."):
                 pipeline.addLorasToPipeline(loras=lora_metadata)
 
-            if override_vae:
+            if override_vae and vae_metadata:
                 with st.spinner(f"Loading VAE {vae_metadata.get('vae_path')}..."):
-                    pipeline.vae = load_custom_vae(vae_metadata.get("vae_path"))
+                    pipeline.pipeline.vae = load_custom_vae(
+                        vae_metadata.get("vae_path")
+                    )
 
             with st.spinner(f"Moving pipeline to device: {pipeline.accelerator}"):
                 pipeline.pipeToConfiguredDevice()
 
-            with st.spinner(f"Generating image ... {i + 1} with {model}"):
+            with st.spinner(f"Generating image {i + 1} with {model}..."):
                 output_image, output_parameters = pipeline.forward(
                     positive_prompt=positive_prompt,
                     negative_prompt=negative_prompt,
@@ -355,72 +330,19 @@ with model_comparison_tab:
                     cfg=guidance,
                 )
                 scheduler_config = pipeline.getSchedulerConfig()
-            # append image to list
             generated_pixmaps.append(
                 (output_image, output_parameters, scheduler_config, gen_seed)
             )
             reset_model_cache()
 
-# output section
+# === OUTPUT SECTION ===
 try:
-    if len(generated_pixmaps) > 0:
-        st.success(
-            f"Generation success! Inference produced {len(generated_pixmaps)} images:"
+    if generated_pixmaps:
+        display_generation_results(
+            generated_pixmaps=generated_pixmaps,
+            model_metadata=model_metadata,
+            lora_metadata=lora_metadata,
+            model_type=MODEL_TYPE,
         )
-        with st.container():
-            for element in generated_pixmaps:
-                # get image data
-                output_image, output_parameters, scheduler_config, gen_seed = element
-                inference_uuid: str = random_string()
-
-                # display results
-                img_out, parms_out = st.columns(
-                    [2, 1], border=True, vertical_alignment="center"
-                )
-
-                with img_out:
-                    image_bytes = st.image(output_image, output_format="PNG")
-
-                gen_json: dict = {
-                            "model_name": model_metadata.get("model_checkpoint"),
-                            "loras": [
-                                {
-                                    "lora_name": lora_metadata.get(l)["name"],
-                                    "merge_strength": lora_metadata.get(l)["merge_strength"]
-                                } for l in lora_metadata
-                            ],
-                            "output_parameters": output_parameters,
-                            "scheduler_config": scheduler_config,
-                    }
-                
-                json_filename: str = f"sdxl_{gen_seed}_{inference_uuid}.json"
-
-                with parms_out:
-                    st.json(
-                        gen_json,
-                        expanded=False,
-                    )
-
-                print("/".join((appSettings.config_parameters.storage.output_json,json_filename)))
-                with open("/".join((appSettings.config_parameters.storage.output_json,json_filename)), "w") as f:
-                    json.dump(gen_json, f)
-
-                # save image bytes
-                png_file = f"sdxl_{gen_seed}_{inference_uuid}.png"
-                print("/".join((appSettings.config_parameters.storage.output_images, png_file)))
-                with open("/".join((appSettings.config_parameters.storage.output_images, png_file)), "wb") as f:
-                    from io import BytesIO
-                    from torchvision import transforms as tvT
-
-                    # ndarray -> image
-                    pil_img = tvT.ToPILImage()
-                    # image -> png byte stream
-                    png_bytes = BytesIO()
-                    pil_img(output_image).save(png_bytes, format="PNG")
-
-                    # write
-                    f.write(png_bytes.getvalue())
-
-except NameError as e:
+except NameError:
     st.info("Select generation method and perform inference.")
-
