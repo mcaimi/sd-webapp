@@ -7,6 +7,7 @@ This reduces code duplication across pages while maintaining consistency.
 """
 
 import json
+import logging
 from dataclasses import dataclass, field
 from io import BytesIO
 from pathlib import Path
@@ -24,6 +25,8 @@ from libs.shared.utils import (
 )
 from libs.globals.vars import schedulers, RANDOM_BIT_LENGTH
 from libs.stablediffusion.funcs import get_random_seed
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -392,14 +395,14 @@ def save_generation_output(
     # Save JSON
     json_filename = f"{file_prefix}_{seed}_{inference_uuid}.json"
     json_path = config.get_output_path(json_filename, "json")
-    print(str(json_path))
+    logger.debug("Saving generation JSON: %s", json_path)
     with open(json_path, "w") as f:
         json.dump(gen_json, f)
-    
+
     # Save image
     png_filename = f"{file_prefix}_{seed}_{inference_uuid}.png"
     png_path = config.get_output_path(png_filename, "images")
-    print(str(png_path))
+    logger.debug("Saving generated image: %s", png_path)
     
     pil_img = tvT.ToPILImage()
     png_bytes = BytesIO()

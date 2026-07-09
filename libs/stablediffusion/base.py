@@ -9,6 +9,7 @@ eliminating code duplication while allowing model-specific customization.
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional, Tuple, Dict, Any, Union
+import logging
 import random
 
 import numpy as np
@@ -19,6 +20,8 @@ from diffusers import AutoencoderKL, UNet2DConditionModel
 from libs.globals.vars import RANDOM_BIT_LENGTH, schedulers
 from libs.shared.utils import get_gpu
 from libs.stablediffusion.funcs import get_random_seed
+
+logger = logging.getLogger(__name__)
 
 
 def normalize_path(path: Union[str, Path]) -> Path:
@@ -51,7 +54,7 @@ def convert_mask_to_grayscale(mask: Image.Image) -> Image.Image:
 def load_custom_vae(checkpoint: Union[str, Path]) -> AutoencoderKL:
     """Load a custom Variational Autoencoder from checkpoint."""
     path = normalize_path(checkpoint)
-    print(f"Loading custom VAE {path}")
+    logger.info("Loading custom VAE: %s", path)
     return AutoencoderKL.from_single_file(
         str(path.absolute()), subfolder="vae", use_safetensors=True
     )
@@ -93,10 +96,10 @@ def format_metadata(
     """Prepare generation metadata payload."""
     if seed == -1:
         custom_seed = get_random_seed(RANDOM_BIT_LENGTH)
-        print(f"Generating with random seed: {custom_seed}")
+        logger.debug("Generating with random seed: %d", custom_seed)
     else:
         custom_seed = seed
-        print(f"Generating with constant seed: {custom_seed}")
+        logger.debug("Generating with constant seed: %d", custom_seed)
 
     return {
         "instances": [
@@ -160,7 +163,7 @@ class BasePipelineGenerator(ABC):
     ) -> Tuple[np.ndarray, Dict[str, Any]]:
         """Run inference on the given pipeline."""
         # Set scheduler
-        print(f"Using Scheduler {scheduler_type}")
+        logger.debug("Using scheduler: %s", scheduler_type)
         pipeline.scheduler = schedulers.get(scheduler_type).from_config(
             pipeline.scheduler.config
         )
@@ -284,12 +287,12 @@ class BasePipelineGenerator(ABC):
             lora_path = entry.get("lora_path")
             if lora_path is None:
                 continue
-                
+
             weights_file = Path(lora_path)
             strength = entry.get("merge_strength", 0.5)
             adapter_name = f"name_{weights_file.stem}"
 
-            print(f"Loading Lora: {weights_file}, fusion strength: {strength}")
+            logger.info("Loading LoRA: %s (strength: %.2f)", weights_file, strength)
 
             for pipeline in [self.pipeline, self.inpaint_pipeline]:
                 if pipeline is not None:

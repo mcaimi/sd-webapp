@@ -6,9 +6,19 @@ A Streamlit-based web interface for Stable Diffusion image generation.
 Supports SD1.5 and SDXL models for text-to-image, inpainting, and model merging.
 """
 
+import os
+from pathlib import Path
+
 import streamlit as st
 
+from libs.shared.logging_config import setup_logging
 from libs.shared.config import get_app_config
+
+# Initialize logging before any other imports that might use it
+setup_logging(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    log_file=Path("logs/sd_webapp.log") if os.getenv("LOG_TO_FILE") else None,
+)
 
 
 def main():

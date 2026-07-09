@@ -19,6 +19,7 @@ Features:
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Union, Callable, Any
+import logging
 import time
 
 import torch
@@ -31,6 +32,8 @@ from libs.stablediffusion.mergeops import (
     save_checkpoint,
     merge_checkpoints,
 )
+
+logger = logging.getLogger(__name__)
 
 # Re-export for convenience
 __all__ = [
@@ -118,7 +121,7 @@ class MergePipeline:
                 "metadata": metadata,
                 "path": checkpoint_path,
             }
-            print(f"Cached checkpoint: {cache_key}")
+            logger.info("Cached checkpoint: %s", cache_key)
 
         return cache_key
 
@@ -173,7 +176,7 @@ class MergePipeline:
 
             # Execute each merge step
             for i, step in enumerate(recipe["steps"]):
-                print(f"Executing merge step {i + 1}/{len(recipe['steps'])}")
+                logger.info("Executing merge step %d/%d", i + 1, len(recipe["steps"]))
 
                 target_key = self.load_and_cache_checkpoint(step["target_model"])
                 target_weights = self.loaded_checkpoints[target_key]["weights"]
@@ -181,7 +184,7 @@ class MergePipeline:
                 # Create merge config
                 progress_callback = None
                 if step.get("show_progress", False):
-                    progress_callback = lambda p: print(f"  Progress: {p * 100:.1f}%")
+                    progress_callback = lambda p: logger.debug("Progress: %.1f%%", p * 100)
 
                 config = MergeConfig(
                     method=MergeMethod(step.get("method", "linear")),
@@ -212,7 +215,7 @@ class MergePipeline:
             return save_checkpoint(current_weights, output_path, recipe_metadata)
 
         except Exception as e:
-            print(f"Failed to execute merge recipe: {e}")
+            logger.error("Failed to execute merge recipe: %s", e)
             return False
 
     def merge_for_pipeline_generator(
@@ -244,8 +247,9 @@ class MergePipeline:
             )
 
             # Perform merge
-            print(
-                f"Merging {base_model} with {target_model} using {config.method.value}"
+            logger.info(
+                "Merging %s with %s using %s",
+                base_model, target_model, config.method.value
             )
             merged_weights = merge_checkpoints(base_weights, target_weights, config)
 
@@ -269,14 +273,14 @@ class MergePipeline:
 
             # Save merged model
             if save_checkpoint(merged_weights, output_path, merged_metadata):
-                print(f"✓ Merged model saved: {output_path}")
+                logger.info("Merged model saved: %s", output_path)
                 return str(output_path)
             else:
-                print("✗ Failed to save merged model")
+                logger.error("Failed to save merged model")
                 return None
 
         except Exception as e:
-            print(f"✗ Merge failed: {e}")
+            logger.error("Merge failed: %s", e)
             return None
 
     def clear_cache(self) -> None:
@@ -284,7 +288,7 @@ class MergePipeline:
         self.loaded_checkpoints.clear()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-        print("Checkpoint cache cleared")
+        logger.info("Checkpoint cache cleared")
 
     def get_cache_info(self) -> Dict[str, Any]:
         """Get information about cached checkpoints."""

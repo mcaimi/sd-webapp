@@ -8,6 +8,7 @@ GPU detection, safetensors handling, etc.
 
 import os
 import json
+import logging
 import random
 import string
 import struct
@@ -19,6 +20,8 @@ import torch.cuda as cuda
 import torch.backends.mps as apple_mps
 
 from libs.globals.vars import DEFAULT_MODELS_PATH, DEFAULT_LORA_PATH, SFT_HEADER_LEN
+
+logger = logging.getLogger(__name__)
 
 
 def check_or_create_path(target_path: Union[str, Path]) -> None:
@@ -94,9 +97,9 @@ def get_gpu() -> Tuple[str, torch.dtype]:
     """
     accelerator = "cpu"
     dtype = torch.float16
-    
+
     if apple_mps.is_available():
-        print("Apple Metal Performance Shaders Available!")
+        logger.info("Apple Metal Performance Shaders Available!")
         accelerator = "mps"
     elif cuda.is_available():
         device_name = cuda.get_device_name()
@@ -104,15 +107,15 @@ def get_gpu() -> Tuple[str, torch.dtype]:
         device_available_mem, device_total_mem = [
             x / 1024**3 for x in cuda.mem_get_info()
         ]
-        print(
-            f"A GPU is available! [{device_name} - {device_capabilities} - "
-            f"{device_available_mem:.1f}/{device_total_mem:.1f} GB VRAM]"
+        logger.info(
+            "GPU available: %s - %s - %.1f/%.1f GB VRAM",
+            device_name, device_capabilities, device_available_mem, device_total_mem
         )
         accelerator = "cuda"
     else:
-        print("NO GPU FOUND. Using CPU (this will be slow).")
+        logger.warning("No GPU found. Using CPU (this will be slow).")
         dtype = torch.float32
-    
+
     return accelerator, dtype
 
 

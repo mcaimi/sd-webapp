@@ -5,6 +5,7 @@ Stable Diffusion XL Pipeline Generator
 Provides SDXL-specific implementation of the base pipeline generator.
 """
 
+import logging
 from typing import Dict, Tuple
 
 from diffusers import StableDiffusionXLPipeline, StableDiffusionXLInpaintPipeline
@@ -16,6 +17,8 @@ from libs.stablediffusion.base import (
     gen_noise,
     format_metadata,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # Re-export for backward compatibility
@@ -61,7 +64,7 @@ class SDXLPipelineGenerator(BasePipelineGenerator):
     def loadPipeline(self) -> None:
         """Load the SDXL generation pipeline."""
         self._init_device()
-        print(f"Loading SDXL Checkpoint {self.model_checkpoint}")
+        logger.info("Loading SDXL checkpoint: %s", self.model_checkpoint)
         self.pipeline = StableDiffusionXLPipeline.from_single_file(
             self.model_checkpoint, torch_dtype=self.dtype, use_safetensors=True
         )
@@ -74,7 +77,7 @@ class SDXLPipelineGenerator(BasePipelineGenerator):
     def loadInpaintPipeline(self) -> None:
         """Load the SDXL inpainting pipeline."""
         self._init_device()
-        print(f"Loading SDXL Inpaint Checkpoint {self.model_checkpoint}")
+        logger.info("Loading SDXL inpaint checkpoint: %s", self.model_checkpoint)
         self.inpaint_pipeline = StableDiffusionXLInpaintPipeline.from_single_file(
             self.model_checkpoint, torch_dtype=self.dtype, use_safetensors=True
         )

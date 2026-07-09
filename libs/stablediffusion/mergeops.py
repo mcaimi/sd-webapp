@@ -10,6 +10,7 @@ Provides low-level functions for:
 """
 
 import json
+import logging
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -21,6 +22,8 @@ from safetensors.torch import load_file, save_file
 from libs.globals.vars import MergeMethod
 from libs.stablediffusion.funcs import merge_tensors
 from libs.shared.exceptions import CheckpointLoadError, MergeError
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -62,19 +65,20 @@ def load_checkpoint_dict(
         )
     
     try:
-        print(f"Loading weights from checkpoint {checkpoint_path}...")
+        logger.info("Loading checkpoint: %s", checkpoint_path)
         weights = load_file(checkpoint_path, device=device)
-        
+
         # Try to load associated metadata file
         metadata = {}
         metadata_file = checkpoint_path.with_suffix(".json")
         if metadata_file.exists():
             with open(metadata_file, "r") as f:
                 metadata = json.load(f)
-        
+
         return weights, metadata
-        
+
     except Exception as e:
+        logger.error("Failed to load checkpoint %s: %s", checkpoint_path, e)
         raise CheckpointLoadError(
             f"Failed to load checkpoint {checkpoint_path}: {e}"
         )
@@ -210,23 +214,23 @@ def save_checkpoint(
                 f".backup_{int(time.time())}.safetensors"
             )
             filepath.rename(backup_path)
-            print(f"Created backup: {backup_path}")
-        
+            logger.info("Created backup: %s", backup_path)
+
         # Save weights
-        print(f"Saving checkpoint to {filepath}...")
+        logger.info("Saving checkpoint: %s", filepath)
         save_file(weights, filepath)
-        
+
         # Save metadata if provided
         if metadata:
             metadata_file = filepath.with_suffix(".json")
             with open(metadata_file, "w") as f:
                 json.dump(metadata, f, indent=2)
-            print(f"Saved metadata to {metadata_file}")
-        
+            logger.debug("Saved metadata: %s", metadata_file)
+
         return True
-        
+
     except Exception as e:
-        print(f"Failed to save checkpoint: {e}")
+        logger.error("Failed to save checkpoint: %s", e)
         return False
 
 
@@ -258,20 +262,20 @@ def batch_merge_checkpoints(
     
     for i, target_checkpoint in enumerate(checkpoint_list):
         try:
-            print(f"\nMerging {i + 1}/{len(checkpoint_list)}: {target_checkpoint}")
-            
+            logger.info("Merging %d/%d: %s", i + 1, len(checkpoint_list), target_checkpoint)
+
             # Load target checkpoint
             target_weights, target_metadata = load_checkpoint_dict(
                 target_checkpoint, config.device
             )
-            
+
             # Perform merge
             merged_weights = merge_checkpoints(base_weights, target_weights, config)
-            
+
             # Create output filename
             target_path = Path(target_checkpoint)
             output_filename = output_path / f"merged_{target_path.stem}.safetensors"
-            
+
             # Create metadata
             merged_metadata = {
                 "base_model": str(base_checkpoint),
@@ -282,16 +286,16 @@ def batch_merge_checkpoints(
                 "base_metadata": base_metadata,
                 "target_metadata": target_metadata,
             }
-            
+
             # Save result
             if save_checkpoint(merged_weights, output_filename, merged_metadata):
                 results.append(str(output_filename))
-                print(f"✓ Saved: {output_filename}")
+                logger.info("Successfully saved: %s", output_filename)
             else:
-                print(f"✗ Failed to save: {output_filename}")
-                
+                logger.error("Failed to save: %s", output_filename)
+
         except Exception as e:
-            print(f"✗ Error merging {target_checkpoint}: {e}")
+            logger.error("Error merging %s: %s", target_checkpoint, e)
     
     return results
 
@@ -324,8 +328,8 @@ def merge_checkpoints_chunked(
     for chunk_idx in range(0, len(keys), chunk_size):
         chunk_num = chunk_idx // chunk_size + 1
         chunk_keys = keys[chunk_idx:chunk_idx + chunk_size]
-        print(f"Processing chunk {chunk_num}/{total_chunks}")
-        
+        logger.debug("Processing chunk %d/%d", chunk_num, total_chunks)
+
         # Create chunk dictionaries
         base_chunk = {k: base_ckpt[k] for k in chunk_keys}
         target_chunk = {k: target_ckpt[k] for k in chunk_keys}

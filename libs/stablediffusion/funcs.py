@@ -9,6 +9,7 @@ Provides:
     - Random seed generation
 """
 
+import logging
 import random
 
 import torch
@@ -16,6 +17,8 @@ import torch.nn.functional as F
 
 from libs.globals.vars import MergeMethod, RANDOM_BIT_LENGTH
 from libs.shared.exceptions import MergeError
+
+logger = logging.getLogger(__name__)
 
 
 def get_random_seed(seed_len: int = RANDOM_BIT_LENGTH) -> int:
