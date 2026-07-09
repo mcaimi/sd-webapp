@@ -6,7 +6,7 @@ Provides SD1.5-specific implementation of the base pipeline generator.
 """
 
 import logging
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 
 from diffusers import StableDiffusionPipeline, StableDiffusionInpaintPipeline
 
@@ -83,10 +83,10 @@ class SD15PipelineGenerator(BasePipelineGenerator):
 
     # Legacy property aliases
     @property
-    def sd_pipeline(self):
+    def sd_pipeline(self) -> Optional[StableDiffusionPipeline]:
         """Legacy alias for pipeline."""
         return self.pipeline
 
     @sd_pipeline.setter
-    def sd_pipeline(self, value):
+    def sd_pipeline(self, value: Optional[StableDiffusionPipeline]) -> None:
         self.pipeline = value

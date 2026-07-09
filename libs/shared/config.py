@@ -17,6 +17,7 @@ from yaml import safe_load, YAMLError
 
 from libs.shared.parameters import Parameters
 from libs.shared.utils import check_or_create_path
+from libs.shared.exceptions import ConfigurationError
 
 
 @dataclass
@@ -66,27 +67,33 @@ class AppConfig:
     def get_model_paths(self, model_type: str) -> Dict[str, str]:
         """
         Get all paths for a specific model type.
-        
+
         Args:
             model_type: Either 'sd15' or 'sdxl'
-            
+
         Returns:
             Dictionary with 'checkpoints', 'loras', and 'vae' paths
+
+        Raises:
+            ConfigurationError: If model_type is not 'sd15' or 'sdxl'
         """
+        if model_type not in ("sd15", "sdxl"):
+            raise ConfigurationError(
+                f"Invalid model_type: {model_type}. Must be 'sd15' or 'sdxl'"
+            )
+
         if model_type == "sd15":
             return {
                 "checkpoints": self.checkpoints_sd15_path,
                 "loras": self.loras_sd15_path,
                 "vae": self.vae_sd15_path,
             }
-        elif model_type == "sdxl":
+        else:  # sdxl
             return {
                 "checkpoints": self.checkpoints_sdxl_path,
                 "loras": self.loras_sdxl_path,
                 "vae": self.vae_sdxl_path,
             }
-        else:
-            raise ValueError(f"Unknown model type: {model_type}")
     
     def setup_paths(self) -> None:
         """Create all required directories if they don't exist."""
@@ -106,21 +113,27 @@ class AppConfig:
     def get_output_path(self, filename: str, output_type: str = "images") -> Path:
         """
         Get full output path for a file.
-        
+
         Args:
             filename: The filename to save
             output_type: Either 'images' or 'json'
-            
+
         Returns:
             Full Path object to the output file
+
+        Raises:
+            ConfigurationError: If output_type is not 'images' or 'json'
         """
+        if output_type not in ("images", "json"):
+            raise ConfigurationError(
+                f"Invalid output_type: {output_type}. Must be 'images' or 'json'"
+            )
+
         if output_type == "images":
             base_path = self.output_images_path
-        elif output_type == "json":
+        else:  # json
             base_path = self.output_json_path
-        else:
-            raise ValueError(f"Unknown output type: {output_type}")
-        
+
         return Path(base_path) / filename
 
 
@@ -130,9 +143,9 @@ def _load_yaml_config(config_file: str) -> Dict[str, Any]:
         with open(config_file, "r") as f:
             return safe_load(f)
     except YAMLError as e:
-        raise RuntimeError(f"Failed to parse YAML config: {e}")
+        raise ConfigurationError(f"Failed to parse YAML config: {e}")
     except FileNotFoundError:
-        raise RuntimeError(f"Config file not found: {config_file}")
+        raise ConfigurationError(f"Config file not found: {config_file}")
 
 
 @lru_cache(maxsize=1)

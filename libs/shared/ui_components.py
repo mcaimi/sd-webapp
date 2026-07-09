@@ -11,7 +11,7 @@ import logging
 from dataclasses import dataclass, field
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple, Callable
+from typing import Dict, List, Optional, Any, Tuple, Callable, Type
 
 import streamlit as st
 from PIL import Image
@@ -478,8 +478,16 @@ def display_generation_results(
             )
 
 
-def get_scheduler_from_name(scheduler_name: str):
-    """Get scheduler class from name."""
+def get_scheduler_from_name(scheduler_name: str) -> Optional[Type]:
+    """
+    Get scheduler class from name.
+
+    Args:
+        scheduler_name: Name of the scheduler
+
+    Returns:
+        Scheduler class or None if not found
+    """
     return schedulers.get(scheduler_name)
 
 

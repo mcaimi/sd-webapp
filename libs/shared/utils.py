@@ -58,14 +58,16 @@ def enumerate_models(path: Union[str, Path] = DEFAULT_MODELS_PATH) -> Dict[str, 
 def read_safetensors_header(filename: Union[str, Path]) -> Dict:
     """
     Read and parse the metadata header from a safetensors file.
-    
+
     Args:
         filename: Path to the safetensors file
-        
+
     Returns:
         Parsed metadata dictionary
-        
+
     Raises:
+        TypeError: If filename is not str or Path
+        FileNotFoundError: If the file doesn't exist
         Exception: If file cannot be read or parsed
     """
     if isinstance(filename, str):
@@ -76,12 +78,15 @@ def read_safetensors_header(filename: Union[str, Path]) -> Dict:
         raise TypeError(
             f"read_safetensors_header(): filename must be str or Path, got {type(filename).__name__}"
         )
-    
+
+    if not filepath.exists():
+        raise FileNotFoundError(f"Safetensors file not found: {filepath}")
+
     with open(filepath, "rb") as f:
         # Read header length (8 bytes, little-endian unsigned long long)
         header_bytes = f.read(SFT_HEADER_LEN)
         metadata_len = struct.unpack("<Q", header_bytes)[0]
-        
+
         # Read and parse metadata
         metadata = f.read(metadata_len)
         return json.loads(metadata)

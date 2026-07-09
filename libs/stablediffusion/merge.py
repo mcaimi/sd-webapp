@@ -26,6 +26,7 @@ import torch
 
 from libs.shared.utils import get_gpu
 from libs.globals.vars import MergeMethod
+from libs.shared.exceptions import MergeError
 from libs.stablediffusion.mergeops import (
     MergeConfig,
     load_checkpoint_dict,
@@ -214,9 +215,12 @@ class MergePipeline:
             # Save final result
             return save_checkpoint(current_weights, output_path, recipe_metadata)
 
+        except MergeError:
+            # Re-raise MergeErrors as-is
+            raise
         except Exception as e:
             logger.error("Failed to execute merge recipe: %s", e)
-            return False
+            raise MergeError(f"Recipe execution failed: {e}") from e
 
     def merge_for_pipeline_generator(
         self,
@@ -277,11 +281,14 @@ class MergePipeline:
                 return str(output_path)
             else:
                 logger.error("Failed to save merged model")
-                return None
+                raise MergeError(f"Failed to save merged model to {output_path}")
 
+        except MergeError:
+            # Re-raise MergeErrors as-is
+            raise
         except Exception as e:
             logger.error("Merge failed: %s", e)
-            return None
+            raise MergeError(f"Model merge operation failed: {e}") from e
 
     def clear_cache(self) -> None:
         """Clear cached checkpoints to free memory."""

@@ -11,6 +11,7 @@ from yaml import safe_load, YAMLError
 
 from libs.shared.parameters import Parameters
 from libs.shared.utils import check_or_create_path
+from libs.shared.exceptions import ConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -47,10 +48,13 @@ class Properties:
             self.config_parameters = Parameters(config_data)
         except YAMLError as e:
             logger.error("YAML parsing error: %s", e)
-            raise
+            raise ConfigurationError(f"Failed to parse YAML config: {e}") from e
+        except FileNotFoundError as e:
+            logger.error("Config file not found: %s", self.config_file_name)
+            raise ConfigurationError(f"Config file not found: {self.config_file_name}") from e
         except Exception as e:
             logger.error("Configuration load error: %s", e)
-            raise
+            raise ConfigurationError(f"Failed to load configuration: {e}") from e
 
     # Legacy method name alias
     def load_config_parms(self) -> None:

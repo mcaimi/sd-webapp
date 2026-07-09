@@ -13,12 +13,14 @@ import logging
 import random
 
 import numpy as np
+import torch
 from torch import Generator
 from PIL import Image
-from diffusers import AutoencoderKL, UNet2DConditionModel
+from diffusers import AutoencoderKL, UNet2DConditionModel, DiffusionPipeline
 
 from libs.globals.vars import RANDOM_BIT_LENGTH, schedulers
 from libs.shared.utils import get_gpu
+from libs.shared.exceptions import PipelineError
 from libs.stablediffusion.funcs import get_random_seed
 
 logger = logging.getLogger(__name__)
@@ -128,11 +130,11 @@ class BasePipelineGenerator(ABC):
     MODEL_TYPE = "base"
 
     def __init__(self, model_checkpoint: str):
-        self.model_checkpoint = model_checkpoint
-        self.pipeline = None
-        self.inpaint_pipeline = None
+        self.model_checkpoint: str = model_checkpoint
+        self.pipeline: Optional[DiffusionPipeline] = None
+        self.inpaint_pipeline: Optional[DiffusionPipeline] = None
         self.accelerator: Optional[str] = None
-        self.dtype = None
+        self.dtype: Optional[torch.dtype] = None
 
     @staticmethod
     @abstractmethod
@@ -204,11 +206,14 @@ class BasePipelineGenerator(ABC):
         cfg: float,
         seed: int,
     ) -> Tuple[np.ndarray, Dict[str, Any]]:
-        """Generate an image from text prompts."""
+        """Generate an image from text prompts.
+
+        Raises:
+            PipelineError: If no pipeline is loaded
+        """
         if self.pipeline is None:
-            return gen_noise(width, height)[0], {
-                "generation": {"status": "no model loaded", "output": "noise matrix"}
-            }
+            logger.error("Cannot generate image: no pipeline loaded")
+            raise PipelineError("No model loaded. Please load a pipeline first.")
 
         return self._run_inference(
             self.pipeline,
@@ -233,11 +238,14 @@ class BasePipelineGenerator(ABC):
         cfg: float,
         seed: int,
     ) -> Tuple[np.ndarray, Dict[str, Any]]:
-        """Inpaint an image region."""
+        """Inpaint an image region.
+
+        Raises:
+            PipelineError: If no inpainting pipeline is loaded
+        """
         if self.inpaint_pipeline is None:
-            return gen_noise(self.DEFAULT_WIDTH, self.DEFAULT_HEIGHT)[0], {
-                "generation": {"status": "no inpainting model loaded", "output": "noise matrix"}
-            }
+            logger.error("Cannot inpaint: no inpainting pipeline loaded")
+            raise PipelineError("No inpainting model loaded. Please load an inpainting pipeline first.")
 
         # Ensure proper image formats
         pil_image = convert_to_pil(image)

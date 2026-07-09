@@ -6,7 +6,7 @@ Provides SDXL-specific implementation of the base pipeline generator.
 """
 
 import logging
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 
 from diffusers import StableDiffusionXLPipeline, StableDiffusionXLInpaintPipeline
 
@@ -89,10 +89,10 @@ class SDXLPipelineGenerator(BasePipelineGenerator):
 
     # Legacy property aliases
     @property
-    def sdxl_pipeline(self):
+    def sdxl_pipeline(self) -> Optional[StableDiffusionXLPipeline]:
         """Legacy alias for pipeline."""
         return self.pipeline
 
     @sdxl_pipeline.setter
-    def sdxl_pipeline(self, value):
+    def sdxl_pipeline(self, value: Optional[StableDiffusionXLPipeline]) -> None:
         self.pipeline = value

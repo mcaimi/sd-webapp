@@ -90,42 +90,50 @@ def validate_checkpoints(
 ) -> Tuple[bool, List[str]]:
     """
     Validate that checkpoints are compatible for merging.
-    
+
     Args:
         base_ckpt: Base checkpoint dictionary
         *other_ckpts: Additional checkpoints to validate against base
-        
+
     Returns:
         Tuple of (is_valid, list_of_errors)
     """
     errors = []
     base_keys = set(base_ckpt.keys())
-    
+
     for i, ckpt in enumerate(other_ckpts):
         ckpt_keys = set(ckpt.keys())
-        
+
         # Check for missing/extra keys
         missing_in_base = ckpt_keys - base_keys
         missing_in_ckpt = base_keys - ckpt_keys
-        
+
         if missing_in_base:
-            errors.append(
-                f"Checkpoint {i + 1} has extra keys: {list(missing_in_base)[:5]}..."
-            )
+            error_msg = f"Checkpoint {i + 1} has extra keys: {list(missing_in_base)[:5]}..."
+            errors.append(error_msg)
+            logger.warning(error_msg)
         if missing_in_ckpt:
-            errors.append(
-                f"Checkpoint {i + 1} missing keys: {list(missing_in_ckpt)[:5]}..."
-            )
-        
+            error_msg = f"Checkpoint {i + 1} missing keys: {list(missing_in_ckpt)[:5]}..."
+            errors.append(error_msg)
+            logger.warning(error_msg)
+
         # Check tensor shapes for matching keys
         for key in base_keys.intersection(ckpt_keys):
             if base_ckpt[key].shape != ckpt[key].shape:
-                errors.append(
+                error_msg = (
                     f"Shape mismatch for key '{key}': "
                     f"{base_ckpt[key].shape} vs {ckpt[key].shape}"
                 )
-    
-    return len(errors) == 0, errors
+                errors.append(error_msg)
+                logger.error(error_msg)
+
+    is_valid = len(errors) == 0
+    if is_valid:
+        logger.debug("Checkpoint validation passed")
+    else:
+        logger.error("Checkpoint validation failed with %d errors", len(errors))
+
+    return is_valid, errors
 
 
 def merge_checkpoints(
