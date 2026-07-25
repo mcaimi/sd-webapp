@@ -9,7 +9,7 @@ from typing import List, Tuple, Dict
 
 import streamlit as st
 
-from libs.shared.utils import get_gpu
+from libs.shared.api_client import SDAPIClient
 from libs.shared.persistence import save_generation_output, build_generation_metadata
 
 
@@ -75,7 +75,17 @@ def display_generation_results(
             )
 
 
-def display_device_info() -> None:
-    """Display current device information in sidebar."""
-    device, dtype = get_gpu()
-    st.markdown(f"**Device: {device} ({dtype})**")
+def display_device_info(api_client: SDAPIClient) -> None:
+    """Display current device information in sidebar from API."""
+    try:
+        system_info = api_client.get_system_info()
+        device = system_info.get("device", {})
+        device_type = device.get("type", "unknown")
+        device_name = device.get("name", "")
+
+        if device_name:
+            st.markdown(f"**Device: {device_type} - {device_name}**")
+        else:
+            st.markdown(f"**Device: {device_type}**")
+    except Exception as e:
+        st.warning(f"Could not fetch device info: {e}")

@@ -9,14 +9,26 @@ All pages should import from here instead of loading config independently.
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Union
 
 from dotenv import dotenv_values
 from yaml import safe_load, YAMLError
 
 from libs.shared.parameters import Parameters
-from libs.shared.utils import check_or_create_path
 from libs.shared.exceptions import ConfigurationError
+
+
+# path sanity check: create if not existing
+def check_or_create_path(target_path: Union[str, Path]) -> None:
+    """
+    Ensure a directory exists, creating it if necessary.
+
+    Args:
+        target_path: Path to the directory
+    """
+    path = Path(target_path) if isinstance(target_path, str) else target_path
+    if not path.is_dir():
+        path.mkdir(parents=True, exist_ok=True)
 
 
 @dataclass
@@ -33,30 +45,6 @@ class AppConfig:
     parameters: Parameters
 
     @property
-    def checkpoints_sd15_path(self) -> str:
-        return self.parameters.checkpoints.sd15.path
-
-    @property
-    def checkpoints_sdxl_path(self) -> str:
-        return self.parameters.checkpoints.sdxl.path
-
-    @property
-    def loras_sd15_path(self) -> str:
-        return self.parameters.loras.sd15.path
-
-    @property
-    def loras_sdxl_path(self) -> str:
-        return self.parameters.loras.sdxl.path
-
-    @property
-    def vae_sd15_path(self) -> str:
-        return self.parameters.vae.sd15.path
-
-    @property
-    def vae_sdxl_path(self) -> str:
-        return self.parameters.vae.sdxl.path
-
-    @property
     def output_images_path(self) -> str:
         return self.parameters.storage.output_images
 
@@ -64,46 +52,9 @@ class AppConfig:
     def output_json_path(self) -> str:
         return self.parameters.storage.output_json
 
-    def get_model_paths(self, model_type: str) -> Dict[str, str]:
-        """
-        Get all paths for a specific model type.
-
-        Args:
-            model_type: Either 'sd15' or 'sdxl'
-
-        Returns:
-            Dictionary with 'checkpoints', 'loras', and 'vae' paths
-
-        Raises:
-            ConfigurationError: If model_type is not 'sd15' or 'sdxl'
-        """
-        if model_type not in ("sd15", "sdxl"):
-            raise ConfigurationError(
-                f"Invalid model_type: {model_type}. Must be 'sd15' or 'sdxl'"
-            )
-
-        if model_type == "sd15":
-            return {
-                "checkpoints": self.checkpoints_sd15_path,
-                "loras": self.loras_sd15_path,
-                "vae": self.vae_sd15_path,
-            }
-        else:  # sdxl
-            return {
-                "checkpoints": self.checkpoints_sdxl_path,
-                "loras": self.loras_sdxl_path,
-                "vae": self.vae_sdxl_path,
-            }
-
     def setup_paths(self) -> None:
         """Create all required directories if they don't exist."""
         paths = [
-            self.checkpoints_sd15_path,
-            self.checkpoints_sdxl_path,
-            self.loras_sd15_path,
-            self.loras_sdxl_path,
-            self.vae_sd15_path,
-            self.vae_sdxl_path,
             self.output_images_path,
             self.output_json_path,
         ]
@@ -187,9 +138,3 @@ def get_app_config(env_file: str = ".env") -> AppConfig:
 def clear_config_cache() -> None:
     """Clear the configuration cache (useful for testing or reloading)."""
     get_app_config.cache_clear()
-
-
-# Convenience function for common pattern
-def get_model_paths(model_type: str) -> Dict[str, str]:
-    """Get model paths for the given model type."""
-    return get_app_config().get_model_paths(model_type)

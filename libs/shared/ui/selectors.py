@@ -7,39 +7,41 @@ Provides Streamlit UI components for selecting models, LoRAs, and VAEs.
 
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from pathlib import Path
 from typing import Dict, Optional, Tuple, Callable
 
 import streamlit as st
 
 from libs.shared.models import ModelSelection, LoraSelection
-from libs.shared.config import get_app_config
-from libs.shared.utils import enumerate_models, read_safetensors_header
+from libs.shared.api_client import SDAPIClient
 
 logger = logging.getLogger(__name__)
 
 
 def load_model_metadata(
     model_name: str,
-    model_path: Path,
-    fallback_name: str = "no model available"
+    model_type: str,
+    resource_type: str,
+    api_client: SDAPIClient,
+    fallback_name: str = "no model available",
 ) -> ModelSelection:
     """
-    Load model metadata safely with fallback.
+    Load model metadata from API safely with fallback.
 
     Args:
         model_name: Name of the model
-        model_path: Path to the model file
+        model_type: Either 'sd15' or 'sdxl'
+        resource_type: Either 'checkpoints', 'loras', or 'vaes'
+        api_client: API client instance
         fallback_name: Name to use if loading fails
 
     Returns:
         ModelSelection with metadata loaded
     """
     try:
-        metadata = read_safetensors_header(model_path)
+        metadata = api_client.get_model_metadata(model_type, resource_type, model_name)
         return ModelSelection(
             name=model_name,
-            path=model_path.absolute() if model_path else None,
+            path=None,  # Path is server-side, not relevant for UI
             metadata=metadata,
         )
     except Exception:
@@ -54,35 +56,41 @@ def create_model_selector(
     label: str,
     model_type: str,
     category: str,
+    api_client: SDAPIClient,
     on_change: Optional[Callable] = None,
     key_suffix: str = "",
 ) -> Optional[ModelSelection]:
     """
-    Create a model selector widget with metadata loading.
+    Create a model selector widget with metadata loading from API.
 
     Args:
         label: Label for the selectbox
         model_type: Either 'sd15' or 'sdxl'
-        category: Either 'checkpoints', 'loras', or 'vae'
+        category: Either 'checkpoints', 'loras', or 'vaes'
+        api_client: API client instance
         on_change: Optional callback when selection changes
         key_suffix: Optional suffix for widget key uniqueness
 
     Returns:
         ModelSelection if a model is selected, None otherwise
     """
-    config = get_app_config()
-    paths = config.get_model_paths(model_type)
-    model_path = paths[category]
-
-    available_models = enumerate_models(model_path)
+    try:
+        models_response = api_client.list_models(model_type, category)
+        available_models = models_response.get("models", [])
+    except Exception as e:
+        st.error(f"Failed to fetch {category}: {e}")
+        return None
 
     if not available_models:
-        st.warning(f"No {category} found in {model_path}")
+        st.warning(f"No {category} found")
         return None
+
+    # Extract model names from response
+    model_names = [m["name"] for m in available_models]
 
     selected = st.selectbox(
         label=label,
-        options=list(available_models.keys()),
+        options=model_names,
         index=0,
         on_change=on_change,
         key=f"{model_type}_{category}_select{key_suffix}",
@@ -92,7 +100,9 @@ def create_model_selector(
         with st.spinner(f"Loading metadata..."):
             return load_model_metadata(
                 model_name=selected,
-                model_path=available_models.get(selected),
+                model_type=model_type,
+                resource_type=category,
+                api_client=api_client,
             )
     return None
 
@@ -100,16 +110,18 @@ def create_model_selector(
 def create_lora_selector(
     label: str,
     model_type: str,
+    api_client: SDAPIClient,
     max_selections: int = 5,
     on_change: Optional[Callable] = None,
     key_suffix: str = "",
 ) -> Dict[str, LoraSelection]:
     """
-    Create a multi-select LoRA selector with strength sliders.
+    Create a multi-select LoRA selector with strength sliders using API.
 
     Args:
         label: Label for the multiselect
         model_type: Either 'sd15' or 'sdxl'
+        api_client: API client instance
         max_selections: Maximum number of LoRAs that can be selected
         on_change: Optional callback when selection changes
         key_suffix: Optional suffix for widget key uniqueness
@@ -117,15 +129,17 @@ def create_lora_selector(
     Returns:
         Dictionary of LoRA name to LoraSelection
     """
-    config = get_app_config()
-    paths = config.get_model_paths(model_type)
-    lora_path = paths["loras"]
-
-    available_loras = enumerate_models(lora_path)
+    try:
+        loras_response = api_client.list_models(model_type, "loras")
+        available_loras = loras_response.get("models", [])
+        lora_names = [m["name"] for m in available_loras]
+    except Exception as e:
+        st.error(f"Failed to fetch LoRAs: {e}")
+        return {}
 
     selected_loras = st.multiselect(
         label=label,
-        options=list(available_loras.keys()),
+        options=lora_names,
         max_selections=max_selections,
         default=[],
         on_change=on_change,
@@ -138,33 +152,31 @@ def create_lora_selector(
         return lora_selections
 
     # Load metadata in parallel for better performance
-    def load_lora_metadata(i: int, lora_name: str, lora_path: Optional[Path]) -> Tuple:
-        """Load LoRA metadata (runs in thread pool)."""
+    def load_lora_metadata(i: int, lora_name: str) -> Tuple:
+        """Load LoRA metadata from API (runs in thread pool)."""
         try:
-            metadata = read_safetensors_header(lora_path) if lora_path else {}
-            return i, lora_name, lora_path, metadata, None
+            metadata = api_client.get_model_metadata(model_type, "loras", lora_name)
+            return i, lora_name, metadata, None
         except Exception as e:
             logger.warning("Failed to load LoRA metadata for %s: %s", lora_name, e)
-            return i, lora_name, None, {}, e
+            return i, lora_name, {}, e
 
     with st.spinner("Loading LoRA metadata..."):
         # Pre-load all metadata in parallel (I/O bound operation)
         metadata_results = {}
         with ThreadPoolExecutor(max_workers=min(4, len(selected_loras))) as executor:
             futures = {
-                executor.submit(
-                    load_lora_metadata, i, lora_name, available_loras.get(lora_name)
-                ): i
+                executor.submit(load_lora_metadata, i, lora_name): i
                 for i, lora_name in enumerate(selected_loras)
             }
 
             for future in as_completed(futures):
-                i, lora_name, lora_path, metadata, error = future.result()
-                metadata_results[i] = (lora_name, lora_path, metadata, error)
+                i, lora_name, metadata, error = future.result()
+                metadata_results[i] = (lora_name, metadata, error)
 
         # Create UI elements in main thread (must be sequential)
         for i, lora_name in enumerate(selected_loras):
-            lora_name_loaded, lora_path, metadata, error = metadata_results[i]
+            lora_name_loaded, metadata, error = metadata_results[i]
 
             strength = st.slider(
                 label=f"{lora_name} merge strength",
@@ -178,7 +190,7 @@ def create_lora_selector(
             if error is None:
                 lora_selections[f"lora_{i}"] = LoraSelection(
                     name=lora_name_loaded,
-                    path=lora_path.absolute() if lora_path else None,
+                    path=None,  # Server-side path
                     merge_strength=strength,
                     metadata=metadata,
                 )
@@ -195,14 +207,16 @@ def create_lora_selector(
 
 def create_vae_selector(
     model_type: str,
+    api_client: SDAPIClient,
     on_change: Optional[Callable] = None,
     key_suffix: str = "",
 ) -> Tuple[bool, Optional[ModelSelection]]:
     """
-    Create a VAE override selector.
+    Create a VAE override selector using API.
 
     Args:
         model_type: Either 'sd15' or 'sdxl'
+        api_client: API client instance
         on_change: Optional callback when selection changes
         key_suffix: Optional suffix for widget key uniqueness
 
@@ -222,7 +236,8 @@ def create_vae_selector(
     vae_selection = create_model_selector(
         label=f"Select {model_type.upper()} VAE",
         model_type=model_type,
-        category="vae",
+        category="vaes",
+        api_client=api_client,
         on_change=on_change,
         key_suffix=key_suffix,
     )
@@ -232,13 +247,17 @@ def create_vae_selector(
 
 def create_sidebar_model_selection(
     model_type: str,
+    api_client: SDAPIClient,
     on_change: Optional[Callable] = None,
-) -> Tuple[Optional[ModelSelection], Dict[str, LoraSelection], bool, Optional[ModelSelection]]:
+) -> Tuple[
+    Optional[ModelSelection], Dict[str, LoraSelection], bool, Optional[ModelSelection]
+]:
     """
-    Create the complete sidebar with model, LoRA, and VAE selection.
+    Create the complete sidebar with model, LoRA, and VAE selection using API.
 
     Args:
         model_type: Either 'sd15' or 'sdxl'
+        api_client: API client instance
         on_change: Callback for when selections change
 
     Returns:
@@ -250,6 +269,7 @@ def create_sidebar_model_selection(
             label=f"Select {model_type.upper()} Model",
             model_type=model_type,
             category="checkpoints",
+            api_client=api_client,
             on_change=on_change,
         )
 
@@ -257,17 +277,20 @@ def create_sidebar_model_selection(
         loras = create_lora_selector(
             label=f"Select {model_type.upper()} Lora",
             model_type=model_type,
+            api_client=api_client,
             on_change=on_change,
         )
 
         # VAE selection
         override_vae, vae = create_vae_selector(
             model_type=model_type,
+            api_client=api_client,
             on_change=on_change,
         )
 
         # Device info (imported from display module)
         from libs.shared.ui.display import display_device_info
-        display_device_info()
+
+        display_device_info(api_client)
 
     return model, loras, override_vae, vae

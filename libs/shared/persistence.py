@@ -70,7 +70,7 @@ def save_generation_output(
     Save generated image and metadata to disk.
 
     Args:
-        output_image: Generated image (numpy array)
+        output_image: Generated image (PIL Image)
         output_parameters: Generation parameters
         model_metadata: Model metadata
         lora_metadata: LoRA metadata
@@ -82,8 +82,6 @@ def save_generation_output(
     Returns:
         Tuple of (image_filename, json_filename)
     """
-    from torchvision import transforms as tvT
-
     config = get_app_config()
     inference_uuid = random_string()
 
@@ -109,9 +107,8 @@ def save_generation_output(
     png_path = config.get_output_path(png_filename, "images")
     logger.debug("Saving generated image: %s", png_path)
 
-    pil_img = tvT.ToPILImage()
     png_bytes = BytesIO()
-    pil_img(output_image).save(png_bytes, format="PNG")
+    output_image.save(png_bytes, format="PNG")
 
     with open(png_path, "wb") as f:
         f.write(png_bytes.getvalue())

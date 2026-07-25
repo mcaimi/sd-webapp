@@ -5,14 +5,10 @@ description = "A web application that generates images with Stable Diffusion."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "bitsandbytes>=0.49.2",
-    "diffusers==0.39",
     "dotenv>=0.9.9",
-    "peft>=0.19.1",
     "pillow>=12.0.0",
+    "pyyaml>=6.0.3",
+    "requests>=2.31.0",
     "streamlit>=1.51.0",
     "streamlit-drawable-canvas-fix>=0.9.8",
-    "torch==2.13.0",
-    "torchvision>=0.23.0",
-    "transformers==5.13",
 ]

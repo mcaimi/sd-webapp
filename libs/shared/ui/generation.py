@@ -10,11 +10,12 @@ from typing import Tuple
 import streamlit as st
 
 from libs.shared.models import GenerationSettings
-from libs.globals.vars import schedulers
+from libs.shared.api_client import SDAPIClient
 
 
 def create_generation_settings_ui(
     defaults: GenerationSettings,
+    api_client: SDAPIClient,
     show_batch_size: bool = True,
     show_dimensions: bool = True,
 ) -> GenerationSettings:
@@ -23,12 +24,20 @@ def create_generation_settings_ui(
 
     Args:
         defaults: Default values for settings
+        api_client: API client for fetching scheduler list
         show_batch_size: Whether to show batch size control
         show_dimensions: Whether to show width/height controls
 
     Returns:
         Updated GenerationSettings
     """
+    # Fetch available schedulers from API
+    try:
+        available_schedulers = api_client.list_schedulers()
+    except Exception as e:
+        st.error(f"Failed to fetch schedulers: {e}")
+        available_schedulers = ["DPM++ 2M"]  # Fallback default
+
     with st.expander("Generation Settings..."):
         guidance = st.slider(
             "Guidance Scale",
@@ -60,8 +69,8 @@ def create_generation_settings_ui(
             sched, seedbox = st.columns([1, 1])
             scheduler_type = sched.selectbox(
                 "Noise Scheduler",
-                options=list(schedulers.keys()),
-                index=defaults.scheduler_index,
+                options=available_schedulers,
+                index=min(defaults.scheduler_index, len(available_schedulers) - 1),
             )
             seed = seedbox.number_input(
                 "Random Seed",
@@ -72,7 +81,7 @@ def create_generation_settings_ui(
                 help="Generation Seed. -1 Means Random Seed",
             )
 
-        scheduler_index = list(schedulers.keys()).index(scheduler_type)
+        scheduler_index = available_schedulers.index(scheduler_type)
 
     return GenerationSettings(
         positive_prompt=defaults.positive_prompt,
