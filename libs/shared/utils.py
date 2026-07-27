@@ -38,27 +38,41 @@ def get_random_seed(seed_len: int = RANDOM_BIT_LENGTH) -> int:
     """
     return random.getrandbits(seed_len)
 
+"""
+Generation Metadata Container
 
-class GenerationMetadata(NamedTuple):
-    """
-    Metadata for a generation request.
+Provides a container class for image generation metadata.
+"""
 
-    Attributes:
-        positive_prompt: The positive prompt
-        negative_prompt: The negative prompt
-        width: Image width
-        height: Image height
-        steps: Number of inference steps
-        cfg_scale: CFG scale
-        seed: Random seed
-        scheduler: Scheduler name
-    """
+import json
+from typing import Dict, Any
 
-    positive_prompt: str
-    negative_prompt: str
-    width: int
-    height: int
-    steps: int
-    cfg_scale: float
-    seed: int
-    scheduler: str
+
+class GenerationMetadata:
+    """Container for image generation metadata with dynamic attribute access."""
+
+    def __init__(self, metadict: Dict[str, Any]) -> None:
+        """
+        Initialize metadata from a dictionary.
+
+        Args:
+            metadict: Dictionary containing generation metadata
+
+        Raises:
+            ValueError: If metadata dictionary is invalid or missing required fields
+        """
+        self.metadata: Dict[str, Any] = metadict
+
+        # Load generation parameters
+        try:
+            for k in self.metadata.keys():
+                setattr(self, f"{k}", self.metadata.get(k))
+
+            # Access generation data specifically
+            instance_parms: Dict[str, Any] = self.output_parameters.get("instances")[0]
+
+            # Set attributes
+            for k in instance_parms.keys():
+                setattr(self, f"{k}", instance_parms.get(k))
+        except (KeyError, TypeError, IndexError) as e:
+            raise ValueError(f"Cannot load metadata from dictionary: {e}") from e

@@ -252,10 +252,6 @@ with sdxl_merger:
         except Exception as e:
             st.error(f"❌ Merge failed: {e}")
 
-    with st.expander("🗄️ Cache Information"):
-        st.json(st.session_state.xl_merge_pipeline.get_cache_info())
-
-
 # === BATCH PROCESSING ===
 with xl_batch_merger:
     st.markdown("### 📦 Batch Model Processing")

@@ -327,9 +327,10 @@ with model_comparison_tab:
                     seed=gen_seed,
                     scheduler=scheduler_type,
                 )
+                st.info(results.get("message", "No Relevant Update for now"))
 
                 # Wait for all comparison jobs
-                for i, job_response in enumerate(results):
+                for i, job_response in enumerate(results.get("comparisons")):
                     job_id = job_response["job_id"]
                     model_name = target_models[i]
 

@@ -590,4 +590,4 @@ class SDAPIClient:
         result = job_status["result"]
         output_image = self.decode_image_from_result(result)
 
-        return output_image, result.get("parameters", {})
+        return output_image, result.get("metadata", {})

@@ -215,7 +215,10 @@ if uploaded_image is not None:
                 black_background = Image.fromarray(
                     np.zeros((input_image.height, input_image.width))
                 ).convert("RGBA")
-                mask_image = black_background + canvas_result.image_data
+                mask_image = Image.fromarray(
+                    black_background + canvas_result.image_data
+                ).convert("RGBA")
+
                 settings_col.image(mask_image)
 
                 # Download mask button
@@ -365,7 +368,7 @@ if uploaded_image is not None:
 
                             result = status.get("result", {})
                             output_image = api_client.decode_image_from_result(result)
-                            output_parameters = result.get("parameters", {})
+                            output_parameters = result.get("metadata", {})
 
                             st.success("Inpainting completed!")
 
