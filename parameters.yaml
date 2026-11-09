@@ -1,5 +1,0 @@
----
-api:
-  # Base URL of the sd-api-backend service.
-  # Overridden by the SD_API_URL environment variable (or .env entry).
-  url: 'http://localhost:8000'
