@@ -1,0 +1,17 @@
+# OpenShift Route. On plain Kubernetes, replace with an Ingress to the Service.
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: sd-webapp-web
+  annotations:
+    # Model downloads and slow backend calls outlast the default 30s.
+    haproxy.router.openshift.io/timeout: 300s
+spec:
+  to:
+    kind: Service
+    name: sd-webapp-web
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

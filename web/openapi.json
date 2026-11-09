@@ -1,0 +1,2482 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Stable Diffusion API",
+    "description": "REST API for SD1.5, SDXL, Illustrious XL, and Flux image generation, inpainting, and model merging",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/sd15/generate": {
+      "post": {
+        "tags": [
+          "SD1.5"
+        ],
+        "summary": "Generate Sd15",
+        "description": "Generate an SD1.5 image (async job).",
+        "operationId": "generate_sd15_api_v1_sd15_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sd15/inpaint": {
+      "post": {
+        "tags": [
+          "SD1.5"
+        ],
+        "summary": "Inpaint Sd15",
+        "description": "SD1.5 inpainting (async job).",
+        "operationId": "inpaint_sd15_api_v1_sd15_inpaint_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InpaintRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sd15/generate/batch": {
+      "post": {
+        "tags": [
+          "SD1.5"
+        ],
+        "summary": "Batch Generate Sd15",
+        "description": "Generate multiple SD1.5 images.",
+        "operationId": "batch_generate_sd15_api_v1_sd15_generate_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchGenerationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sd15/generate/compare": {
+      "post": {
+        "tags": [
+          "SD1.5"
+        ],
+        "summary": "Compare Models Sd15",
+        "description": "Generate images from multiple SD1.5 models for comparison.",
+        "operationId": "compare_models_sd15_api_v1_sd15_generate_compare_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompareModelsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sdxl/generate": {
+      "post": {
+        "tags": [
+          "SDXL"
+        ],
+        "summary": "Generate Sdxl",
+        "description": "Generate an SDXL image (async job).",
+        "operationId": "generate_sdxl_api_v1_sdxl_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sdxl/inpaint": {
+      "post": {
+        "tags": [
+          "SDXL"
+        ],
+        "summary": "Inpaint Sdxl",
+        "description": "SDXL inpainting (async job).",
+        "operationId": "inpaint_sdxl_api_v1_sdxl_inpaint_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InpaintRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sdxl/generate/batch": {
+      "post": {
+        "tags": [
+          "SDXL"
+        ],
+        "summary": "Batch Generate Sdxl",
+        "description": "Generate multiple SDXL images.",
+        "operationId": "batch_generate_sdxl_api_v1_sdxl_generate_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchGenerationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sdxl/generate/compare": {
+      "post": {
+        "tags": [
+          "SDXL"
+        ],
+        "summary": "Compare Models Sdxl",
+        "description": "Generate images from multiple SDXL models for comparison.",
+        "operationId": "compare_models_sdxl_api_v1_sdxl_generate_compare_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompareModelsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/illustrious/generate": {
+      "post": {
+        "tags": [
+          "Illustrious"
+        ],
+        "summary": "Generate Illustrious",
+        "description": "Generate an Illustrious XL image (async job).",
+        "operationId": "generate_illustrious_api_v1_illustrious_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/illustrious/inpaint": {
+      "post": {
+        "tags": [
+          "Illustrious"
+        ],
+        "summary": "Inpaint Illustrious",
+        "description": "Illustrious XL inpainting (async job).",
+        "operationId": "inpaint_illustrious_api_v1_illustrious_inpaint_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InpaintRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/illustrious/generate/batch": {
+      "post": {
+        "tags": [
+          "Illustrious"
+        ],
+        "summary": "Batch Generate Illustrious",
+        "description": "Generate multiple Illustrious XL images.",
+        "operationId": "batch_generate_illustrious_api_v1_illustrious_generate_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchGenerationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/illustrious/generate/compare": {
+      "post": {
+        "tags": [
+          "Illustrious"
+        ],
+        "summary": "Compare Models Illustrious",
+        "description": "Generate images from multiple Illustrious XL models for comparison.",
+        "operationId": "compare_models_illustrious_api_v1_illustrious_generate_compare_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompareModelsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/flux/generate": {
+      "post": {
+        "tags": [
+          "Flux"
+        ],
+        "summary": "Generate Flux",
+        "description": "Generate a Flux image (async job).",
+        "operationId": "generate_flux_api_v1_flux_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FluxGenerationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/flux/inpaint": {
+      "post": {
+        "tags": [
+          "Flux"
+        ],
+        "summary": "Inpaint Flux",
+        "description": "Flux inpainting (async job).",
+        "operationId": "inpaint_flux_api_v1_flux_inpaint_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FluxInpaintRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/flux/generate/batch": {
+      "post": {
+        "tags": [
+          "Flux"
+        ],
+        "summary": "Batch Generate Flux",
+        "description": "Generate multiple Flux images.",
+        "operationId": "batch_generate_flux_api_v1_flux_generate_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FluxBatchGenerationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/flux/generate/compare": {
+      "post": {
+        "tags": [
+          "Flux"
+        ],
+        "summary": "Compare Models Flux",
+        "description": "Generate images from multiple Flux models for comparison.",
+        "operationId": "compare_models_flux_api_v1_flux_generate_compare_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FluxCompareModelsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/models/{model_type}/{resource_type}": {
+      "get": {
+        "tags": [
+          "Models"
+        ],
+        "summary": "List Models",
+        "description": "List available models.\n\nArgs:\n    model_type: \"sd15\" or \"sdxl\"\n    resource_type: \"checkpoints\", \"loras\", or \"vaes\"\n\nReturns:\n    List of models with names and paths",
+        "operationId": "list_models_api_v1_models__model_type___resource_type__get",
+        "parameters": [
+          {
+            "name": "model_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Model Type"
+            }
+          },
+          {
+            "name": "resource_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resource Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/models/{model_type}/{resource_type}/{model_name}/metadata": {
+      "get": {
+        "tags": [
+          "Models"
+        ],
+        "summary": "Get Model Metadata",
+        "description": "Get metadata for a specific model.\n\nArgs:\n    model_type: \"sd15\" or \"sdxl\"\n    resource_type: \"checkpoints\", \"loras\", or \"vaes\"\n    model_name: Model filename\n\nReturns:\n    Model metadata from safetensors header",
+        "operationId": "get_model_metadata_api_v1_models__model_type___resource_type___model_name__metadata_get",
+        "parameters": [
+          {
+            "name": "model_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Model Type"
+            }
+          },
+          {
+            "name": "resource_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resource Type"
+            }
+          },
+          {
+            "name": "model_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Model Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelMetadataResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/models/{model_type}/{resource_type}/{model_name}/download": {
+      "get": {
+        "tags": [
+          "Models"
+        ],
+        "summary": "Download Model",
+        "description": "Download a model file (e.g. a merged checkpoint).\n\nArgs:\n    model_type: \"sd15\", \"sdxl\", \"illustrious\", or \"flux\"\n    resource_type: \"checkpoints\", \"loras\", or \"vaes\"\n    model_name: Model filename",
+        "operationId": "download_model_api_v1_models__model_type___resource_type___model_name__download_get",
+        "parameters": [
+          {
+            "name": "model_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Model Type"
+            }
+          },
+          {
+            "name": "resource_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resource Type"
+            }
+          },
+          {
+            "name": "model_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Model Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs/": {
+      "get": {
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "List Jobs",
+        "description": "List all jobs with their current status.",
+        "operationId": "list_jobs_api_v1_jobs__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/JobStatusResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Jobs Api V1 Jobs  Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "Get Job Status",
+        "description": "Get job status and result.",
+        "operationId": "get_job_status_api_v1_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "Cancel Job",
+        "description": "Cancel a pending or running job.",
+        "operationId": "cancel_job_api_v1_jobs__job_id__delete",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Health Check",
+        "description": "Health check endpoint.",
+        "operationId": "health_check_api_v1_system_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/info": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "System Info",
+        "description": "Get system information including GPU, cache, queue, and host stats.",
+        "operationId": "system_info_api_v1_system_info_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/info/schedulers": {
+      "get": {
+        "tags": [
+          "Informational"
+        ],
+        "summary": "List Schedulers",
+        "description": "List available noise schedulers",
+        "operationId": "list_schedulers_api_v1_info_schedulers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "title": "Response List Schedulers Api V1 Info Schedulers Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/info/app_settings": {
+      "get": {
+        "tags": [
+          "Informational"
+        ],
+        "summary": "List Config",
+        "description": "Return a list of config parameters",
+        "operationId": "list_config_api_v1_info_app_settings_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response List Config Api V1 Info App Settings Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/merge/merge": {
+      "post": {
+        "tags": [
+          "Merge"
+        ],
+        "summary": "Merge Models",
+        "description": "Merge two models asynchronously.\n\nValidates model existence, determines model type, and submits\nmerge job to the queue. The merged model will be saved to the\nsame checkpoint directory as the source models.\n\nArgs:\n    request: MergeRequest with model_type, base_model, target_model,\n             method, alpha, output_name, preserve_metadata\n\nReturns:\n    JobResponse with job_id, status, and message\n\nRaises:\n    HTTPException 404: If base_model or target_model not found",
+        "operationId": "merge_models_api_v1_merge_merge_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/merge/batch": {
+      "post": {
+        "tags": [
+          "Merge"
+        ],
+        "summary": "Batch Merge Models",
+        "description": "Merge base model with multiple target models in batch.\n\nCreates a subdirectory for batch results and merges each\ntarget model with the base model independently.\n\nArgs:\n    request: BatchMergeRequest with model_type, base_model, target_models,\n             method, alpha, output_subdir, preserve_metadata\n\nReturns:\n    JobResponse with job_id, status, and message\n\nRaises:\n    HTTPException 404: If base_model or any target_model not found",
+        "operationId": "batch_merge_models_api_v1_merge_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchMergeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/merge/recipe": {
+      "post": {
+        "tags": [
+          "Merge"
+        ],
+        "summary": "Recipe Merge Models",
+        "description": "Execute a multi-step merge recipe.\n\nApplies sequential merge operations following the recipe steps.\nEach step merges the current result with a new target model.\n\nArgs:\n    request: MergeRecipeRequest with model_type, base_model, steps,\n             output_name\n\nReturns:\n    JobResponse with job_id, status, and message\n\nRaises:\n    HTTPException 404: If base_model or any step's target_model not found",
+        "operationId": "recipe_merge_models_api_v1_merge_recipe_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeRecipeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/outputs/": {
+      "get": {
+        "tags": [
+          "Outputs"
+        ],
+        "summary": "List Outputs",
+        "description": "List persisted generation outputs, newest first.",
+        "operationId": "list_outputs_api_v1_outputs__get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 24,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/outputs/{output_id}/image": {
+      "get": {
+        "tags": [
+          "Outputs"
+        ],
+        "summary": "Get Output Image",
+        "description": "Download the persisted PNG for a generation output.",
+        "operationId": "get_output_image_api_v1_outputs__output_id__image_get",
+        "parameters": [
+          {
+            "name": "output_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Output Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/outputs/{output_id}/metadata": {
+      "get": {
+        "tags": [
+          "Outputs"
+        ],
+        "summary": "Get Output Metadata",
+        "description": "Fetch the persisted generation metadata JSON for an output.",
+        "operationId": "get_output_metadata_api_v1_outputs__output_id__metadata_get",
+        "parameters": [
+          {
+            "name": "output_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Output Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/outputs/{output_id}": {
+      "delete": {
+        "tags": [
+          "Outputs"
+        ],
+        "summary": "Delete Output",
+        "description": "Delete the persisted image and metadata for a generation output.",
+        "operationId": "delete_output_api_v1_outputs__output_id__delete",
+        "parameters": [
+          {
+            "name": "output_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Output Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BatchGenerationRequest": {
+        "properties": {
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/GenerationRequest"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Requests",
+            "description": "List of generation requests"
+          }
+        },
+        "type": "object",
+        "required": [
+          "requests"
+        ],
+        "title": "BatchGenerationRequest",
+        "description": "Request for batch generation."
+      },
+      "BatchMergeRequest": {
+        "properties": {
+          "model_type": {
+            "type": "string",
+            "title": "Model Type",
+            "description": "Model type: 'sd15', 'sdxl', or 'illustrious'"
+          },
+          "base_model": {
+            "type": "string",
+            "title": "Base Model"
+          },
+          "target_models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Target Models",
+            "description": "List of target models"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method",
+            "default": "linear"
+          },
+          "alpha": {
+            "type": "number",
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Alpha",
+            "default": 0.5
+          },
+          "output_subdir": {
+            "type": "string",
+            "title": "Output Subdir",
+            "description": "Output subdirectory",
+            "default": "batch_merged"
+          },
+          "preserve_metadata": {
+            "type": "boolean",
+            "title": "Preserve Metadata",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "model_type",
+          "base_model",
+          "target_models"
+        ],
+        "title": "BatchMergeRequest",
+        "description": "Request for batch merging."
+      },
+      "CompareModelsRequest": {
+        "properties": {
+          "positive_prompt": {
+            "type": "string",
+            "title": "Positive Prompt"
+          },
+          "negative_prompt": {
+            "type": "string",
+            "title": "Negative Prompt",
+            "default": ""
+          },
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 6,
+            "minItems": 2,
+            "title": "Models",
+            "description": "Model checkpoints to compare"
+          },
+          "width": {
+            "type": "integer",
+            "maximum": 2048,
+            "minimum": 256,
+            "title": "Width",
+            "default": 512
+          },
+          "height": {
+            "type": "integer",
+            "maximum": 2048,
+            "minimum": 256,
+            "title": "Height",
+            "default": 512
+          },
+          "steps": {
+            "type": "integer",
+            "maximum": 150,
+            "minimum": 1,
+            "title": "Steps",
+            "default": 30
+          },
+          "cfg_scale": {
+            "type": "number",
+            "maximum": 30,
+            "minimum": 1,
+            "title": "Cfg Scale",
+            "default": 7
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": -1,
+            "title": "Seed",
+            "description": "Fixed seed for fair comparison",
+            "default": 42
+          },
+          "scheduler": {
+            "type": "string",
+            "title": "Scheduler",
+            "default": "DPM++ 2M"
+          }
+        },
+        "type": "object",
+        "required": [
+          "positive_prompt",
+          "models"
+        ],
+        "title": "CompareModelsRequest",
+        "description": "Request for model comparison."
+      },
+      "FluxBatchGenerationRequest": {
+        "properties": {
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/FluxGenerationRequest"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Requests",
+            "description": "List of generation requests"
+          }
+        },
+        "type": "object",
+        "required": [
+          "requests"
+        ],
+        "title": "FluxBatchGenerationRequest",
+        "description": "Request for batch Flux generation."
+      },
+      "FluxCompareModelsRequest": {
+        "properties": {
+          "positive_prompt": {
+            "type": "string",
+            "title": "Positive Prompt"
+          },
+          "negative_prompt": {
+            "type": "string",
+            "title": "Negative Prompt",
+            "default": ""
+          },
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 6,
+            "minItems": 2,
+            "title": "Models",
+            "description": "Model checkpoints to compare"
+          },
+          "width": {
+            "type": "integer",
+            "maximum": 2048,
+            "minimum": 256,
+            "title": "Width",
+            "default": 512
+          },
+          "height": {
+            "type": "integer",
+            "maximum": 2048,
+            "minimum": 256,
+            "title": "Height",
+            "default": 512
+          },
+          "steps": {
+            "type": "integer",
+            "maximum": 150,
+            "minimum": 1,
+            "title": "Steps",
+            "default": 30
+          },
+          "cfg_scale": {
+            "type": "number",
+            "maximum": 30,
+            "minimum": 1,
+            "title": "Cfg Scale",
+            "default": 7
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": -1,
+            "title": "Seed",
+            "description": "Fixed seed for fair comparison",
+            "default": 42
+          },
+          "scheduler": {
+            "type": "string",
+            "title": "Scheduler",
+            "default": "FlowMatch Euler"
+          }
+        },
+        "type": "object",
+        "required": [
+          "positive_prompt",
+          "models"
+        ],
+        "title": "FluxCompareModelsRequest",
+        "description": "Request for Flux model comparison."
+      },
+      "FluxGenerationRequest": {
+        "properties": {
+          "positive_prompt": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Positive Prompt",
+            "description": "Positive prompt"
+          },
+          "negative_prompt": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Negative Prompt",
+            "description": "Negative prompt",
+            "default": ""
+          },
+          "model_checkpoint": {
+            "type": "string",
+            "title": "Model Checkpoint",
+            "description": "Model checkpoint filename"
+          },
+          "width": {
+            "type": "integer",
+            "maximum": 2048,
+            "minimum": 256,
+            "title": "Width",
+            "description": "Image width",
+            "default": 512
+          },
+          "height": {
+            "type": "integer",
+            "maximum": 2048,
+            "minimum": 256,
+            "title": "Height",
+            "description": "Image height",
+            "default": 512
+          },
+          "steps": {
+            "type": "integer",
+            "maximum": 150,
+            "minimum": 1,
+            "title": "Steps",
+            "description": "Inference steps",
+            "default": 30
+          },
+          "cfg_scale": {
+            "type": "number",
+            "maximum": 30,
+            "minimum": 1,
+            "title": "Cfg Scale",
+            "description": "Flux guidance scale (distilled)",
+            "default": 3.5
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": -1,
+            "title": "Seed",
+            "description": "Random seed (-1 for random)",
+            "default": -1
+          },
+          "scheduler": {
+            "type": "string",
+            "title": "Scheduler",
+            "description": "Noise scheduler",
+            "default": "FlowMatch Euler"
+          },
+          "loras": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/LoraConfig"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loras",
+            "description": "LoRA adapters"
+          },
+          "custom_vae": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Vae",
+            "description": "Custom VAE checkpoint"
+          },
+          "true_cfg_scale": {
+            "type": "number",
+            "maximum": 10,
+            "minimum": 1,
+            "title": "True Cfg Scale",
+            "description": "True CFG scale; >1.0 enables negative_prompt",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "positive_prompt",
+          "model_checkpoint"
+        ],
+        "title": "FluxGenerationRequest",
+        "description": "Request for Flux image generation.\n\nFlux uses flow-matching schedulers (incompatible with the SD/SDXL\nscheduler set) and a distilled guidance scale, so scheduler validation\nand the cfg_scale default are overridden; everything else is shared."
+      },
+      "FluxInpaintRequest": {
+        "properties": {
+          "positive_prompt": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Positive Prompt"
+          },
+          "negative_prompt": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Negative Prompt",
+            "default": ""
+          },
+          "model_checkpoint": {
+            "type": "string",
+            "title": "Model Checkpoint"
+          },
+          "image_base64": {
+            "type": "string",
+            "title": "Image Base64",
+            "description": "Base64-encoded input image"
+          },
+          "mask_base64": {
+            "type": "string",
+            "title": "Mask Base64",
+            "description": "Base64-encoded mask image"
+          },
+          "steps": {
+            "type": "integer",
+            "maximum": 150,
+            "minimum": 1,
+            "title": "Steps",
+            "default": 20
+          },
+          "cfg_scale": {
+            "type": "number",
+            "maximum": 30,
+            "minimum": 1,
+            "title": "Cfg Scale",
+            "default": 7
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": -1,
+            "title": "Seed",
+            "default": -1
+          },
+          "scheduler": {
+            "type": "string",
+            "title": "Scheduler",
+            "default": "FlowMatch Euler"
+          },
+          "loras": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/LoraConfig"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loras"
+          },
+          "custom_vae": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Vae"
+          },
+          "strength": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1,
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strength",
+            "description": "Inpaint re-noising strength; None uses the pipeline default (0.6)"
+          },
+          "true_cfg_scale": {
+            "type": "number",
+            "maximum": 10,
+            "minimum": 1,
+            "title": "True Cfg Scale",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "positive_prompt",
+          "model_checkpoint",
+          "image_base64",
+          "mask_base64"
+        ],
+        "title": "FluxInpaintRequest",
+        "description": "Request for Flux inpainting."
+      },
+      "GenerationRequest": {
+        "properties": {
+          "positive_prompt": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Positive Prompt",
+            "description": "Positive prompt"
+          },
+          "negative_prompt": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Negative Prompt",
+            "description": "Negative prompt",
+            "default": ""
+          },
+          "model_checkpoint": {
+            "type": "string",
+            "title": "Model Checkpoint",
+            "description": "Model checkpoint filename"
+          },
+          "width": {
+            "type": "integer",
+            "maximum": 2048,
+            "minimum": 256,
+            "title": "Width",
+            "description": "Image width",
+            "default": 512
+          },
+          "height": {
+            "type": "integer",
+            "maximum": 2048,
+            "minimum": 256,
+            "title": "Height",
+            "description": "Image height",
+            "default": 512
+          },
+          "steps": {
+            "type": "integer",
+            "maximum": 150,
+            "minimum": 1,
+            "title": "Steps",
+            "description": "Inference steps",
+            "default": 30
+          },
+          "cfg_scale": {
+            "type": "number",
+            "maximum": 30,
+            "minimum": 1,
+            "title": "Cfg Scale",
+            "description": "Classifier-free guidance scale",
+            "default": 7
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": -1,
+            "title": "Seed",
+            "description": "Random seed (-1 for random)",
+            "default": -1
+          },
+          "scheduler": {
+            "type": "string",
+            "title": "Scheduler",
+            "description": "Noise scheduler",
+            "default": "DPM++ 2M"
+          },
+          "loras": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/LoraConfig"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loras",
+            "description": "LoRA adapters"
+          },
+          "custom_vae": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Vae",
+            "description": "Custom VAE checkpoint"
+          }
+        },
+        "type": "object",
+        "required": [
+          "positive_prompt",
+          "model_checkpoint"
+        ],
+        "title": "GenerationRequest",
+        "description": "Request for SD1.5/SDXL image generation."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "service": {
+            "type": "string",
+            "title": "Service"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "service"
+        ],
+        "title": "HealthResponse",
+        "description": "Health check response."
+      },
+      "InpaintRequest": {
+        "properties": {
+          "positive_prompt": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Positive Prompt"
+          },
+          "negative_prompt": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Negative Prompt",
+            "default": ""
+          },
+          "model_checkpoint": {
+            "type": "string",
+            "title": "Model Checkpoint"
+          },
+          "image_base64": {
+            "type": "string",
+            "title": "Image Base64",
+            "description": "Base64-encoded input image"
+          },
+          "mask_base64": {
+            "type": "string",
+            "title": "Mask Base64",
+            "description": "Base64-encoded mask image"
+          },
+          "steps": {
+            "type": "integer",
+            "maximum": 150,
+            "minimum": 1,
+            "title": "Steps",
+            "default": 20
+          },
+          "cfg_scale": {
+            "type": "number",
+            "maximum": 30,
+            "minimum": 1,
+            "title": "Cfg Scale",
+            "default": 7
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": -1,
+            "title": "Seed",
+            "default": -1
+          },
+          "scheduler": {
+            "type": "string",
+            "title": "Scheduler",
+            "default": "DPM++ 2M"
+          },
+          "loras": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/LoraConfig"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loras"
+          },
+          "custom_vae": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Vae"
+          }
+        },
+        "type": "object",
+        "required": [
+          "positive_prompt",
+          "model_checkpoint",
+          "image_base64",
+          "mask_base64"
+        ],
+        "title": "InpaintRequest",
+        "description": "Request for SD1.5/SDXL inpainting."
+      },
+      "JobResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "status",
+          "message"
+        ],
+        "title": "JobResponse",
+        "description": "Response containing job ID."
+      },
+      "JobStatusResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "job_type": {
+            "type": "string",
+            "title": "Job Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "progress": {
+            "type": "number",
+            "title": "Progress"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "job_type",
+          "status",
+          "progress",
+          "created_at"
+        ],
+        "title": "JobStatusResponse",
+        "description": "Response containing job status and result."
+      },
+      "LoraConfig": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "LoRA filename"
+          },
+          "strength": {
+            "type": "number",
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Strength",
+            "description": "LoRA merge strength",
+            "default": 0.5
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "LoraConfig",
+        "description": "LoRA adapter configuration."
+      },
+      "MergeRecipeRequest": {
+        "properties": {
+          "model_type": {
+            "type": "string",
+            "title": "Model Type",
+            "description": "Model type: 'sd15', 'sdxl', or 'illustrious'"
+          },
+          "base_model": {
+            "type": "string",
+            "title": "Base Model"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/MergeRecipeStep"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Steps",
+            "description": "Merge recipe steps"
+          },
+          "output_name": {
+            "type": "string",
+            "title": "Output Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model_type",
+          "base_model",
+          "steps",
+          "output_name"
+        ],
+        "title": "MergeRecipeRequest",
+        "description": "Request for executing a merge recipe."
+      },
+      "MergeRecipeStep": {
+        "properties": {
+          "target_model": {
+            "type": "string",
+            "title": "Target Model"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method"
+          },
+          "alpha": {
+            "type": "number",
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Alpha"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target_model",
+          "method",
+          "alpha"
+        ],
+        "title": "MergeRecipeStep",
+        "description": "Single step in a merge recipe."
+      },
+      "MergeRequest": {
+        "properties": {
+          "model_type": {
+            "type": "string",
+            "title": "Model Type",
+            "description": "Model type: 'sd15', 'sdxl', or 'illustrious'"
+          },
+          "base_model": {
+            "type": "string",
+            "title": "Base Model",
+            "description": "Base model checkpoint filename"
+          },
+          "target_model": {
+            "type": "string",
+            "title": "Target Model",
+            "description": "Target model checkpoint filename"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method",
+            "description": "Merge method (linear, slerp, additive, subtract)",
+            "default": "linear"
+          },
+          "alpha": {
+            "type": "number",
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Alpha",
+            "description": "Weight of the target model (0.0 = base, 1.0 = target)",
+            "default": 0.5
+          },
+          "output_name": {
+            "type": "string",
+            "title": "Output Name",
+            "description": "Output checkpoint filename"
+          },
+          "preserve_metadata": {
+            "type": "boolean",
+            "title": "Preserve Metadata",
+            "description": "Preserve model metadata",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "model_type",
+          "base_model",
+          "target_model",
+          "output_name"
+        ],
+        "title": "MergeRequest",
+        "description": "Request for model merging."
+      },
+      "ModelListResponse": {
+        "properties": {
+          "model_type": {
+            "type": "string",
+            "title": "Model Type"
+          },
+          "resource_type": {
+            "type": "string",
+            "title": "Resource Type"
+          },
+          "models": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Models"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model_type",
+          "resource_type",
+          "models"
+        ],
+        "title": "ModelListResponse",
+        "description": "Response containing list of available models."
+      },
+      "ModelMetadataResponse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "path",
+          "metadata"
+        ],
+        "title": "ModelMetadataResponse",
+        "description": "Response containing model metadata."
+      },
+      "OutputItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "image_url": {
+            "type": "string",
+            "title": "Image Url"
+          },
+          "json_url": {
+            "type": "string",
+            "title": "Json Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "size_bytes",
+          "image_url",
+          "json_url"
+        ],
+        "title": "OutputItem",
+        "description": "A single persisted generation (image + metadata pair)."
+      },
+      "OutputListResponse": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OutputItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "limit",
+          "offset",
+          "items"
+        ],
+        "title": "OutputListResponse",
+        "description": "Paginated list of persisted generation outputs."
+      },
+      "SystemInfo": {
+        "properties": {
+          "device": {
+            "type": "string",
+            "title": "Device"
+          },
+          "dtype": {
+            "type": "string",
+            "title": "Dtype"
+          },
+          "vendor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendor"
+          },
+          "gpu_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gpu Name"
+          },
+          "cache_stats": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Cache Stats"
+          },
+          "queue_stats": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Queue Stats"
+          },
+          "gpu_stats": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Gpu Stats"
+          },
+          "host_stats": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Host Stats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device",
+          "dtype",
+          "cache_stats",
+          "queue_stats",
+          "gpu_stats",
+          "host_stats"
+        ],
+        "title": "SystemInfo",
+        "description": "System information response."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

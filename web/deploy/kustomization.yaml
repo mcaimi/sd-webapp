@@ -1,0 +1,17 @@
+# Deploy the web UI next to sd-api-backend:  oc apply -k web/deploy
+# Override the image with:  kustomize edit set image sd-webapp-web=quay.io/<org>/sd-webapp-web:<tag>
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+labels:
+  - pairs:
+      app.kubernetes.io/name: sd-webapp-web
+      app.kubernetes.io/part-of: sd-studio
+    includeSelectors: true
+resources:
+  - deployment.yaml
+  - service.yaml
+  - route.yaml
+images:
+  - name: sd-webapp-web
+    newName: quay.io/example/sd-webapp-web
+    newTag: latest
