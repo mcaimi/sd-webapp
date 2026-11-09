@@ -1,22 +1,5 @@
 ---
-checkpoints:
-  sd15:
-    path: 'models/checkpoints/SD15'
-  sdxl:
-    path: 'models/checkpoints/SDXL'
-
-loras:
-  sd15:
-    path: 'models/loras/SD15'
-  sdxl:
-    path: 'models/loras/SDXL'
-
-vae:
-  sd15:
-    path: 'models/vae/SD15'
-  sdxl:
-    path: 'models/vae/SDXL'
-
-storage:
-  output_images: 'outputs/images'
-  output_json: 'outputs/json'
+api:
+  # Base URL of the sd-api-backend service.
+  # Overridden by the SD_API_URL environment variable (or .env entry).
+  url: 'http://localhost:8000'

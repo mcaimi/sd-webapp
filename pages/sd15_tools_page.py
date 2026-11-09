@@ -9,25 +9,18 @@ Provides model merging tools via API backend:
 - Recipe merging via API
 """
 
-import time
-from pathlib import Path
-
 import streamlit as st
 
-from libs.shared.config import get_app_config
-from libs.shared.api_client import SDAPIClient
+from libs.shared import api_cache
+from libs.shared.ui.generation import wait_for_job_with_progress
 
 
 # Configuration
 MODEL_TYPE = "sd15"
-config = get_app_config()
-api_client = SDAPIClient()
+api_client = api_cache.get_api_client()
 
 # Load header
 st.html("assets/explore_header.html")
-
-# Ensure paths exist
-config.setup_paths()
 
 # === TABS ===
 sd15_info, sd15_merger, batch_merger, recipe_builder = st.tabs(
@@ -42,7 +35,7 @@ with sd15_info:
 
     # Check API health
     try:
-        health = api_client.health_check()
+        health = api_cache.health_check()
         st.success(f"API: {health['status']}", icon="✅")
     except Exception as e:
         st.error(f"API unavailable: {e}", icon="🚨")
@@ -51,7 +44,7 @@ with sd15_info:
 
     # Fetch models from API
     try:
-        models_response = api_client.list_models(MODEL_TYPE, "checkpoints")
+        models_response = api_cache.list_models(MODEL_TYPE, "checkpoints")
         model_options = {m["name"]: m for m in models_response["models"]}
     except Exception as e:
         st.error(f"Failed to load models from API: {e}")
@@ -67,7 +60,7 @@ with sd15_info:
     if selected_checkpoint:
         with st.spinner("Loading Model Metadata..."):
             try:
-                metadata_response = api_client.get_model_metadata(
+                metadata_response = api_cache.get_model_metadata(
                     MODEL_TYPE, "checkpoints", selected_checkpoint
                 )
                 model_metadata = {
@@ -83,7 +76,7 @@ with sd15_info:
     lora_selection, lora_info = st.columns([1, 2], border=True)
 
     try:
-        loras_response = api_client.list_models(MODEL_TYPE, "loras")
+        loras_response = api_cache.list_models(MODEL_TYPE, "loras")
         lora_options = {m["name"]: m for m in loras_response["models"]}
     except Exception:
         lora_options = {}
@@ -97,7 +90,7 @@ with sd15_info:
     if selected_lora:
         with st.spinner("Loading Lora Metadata..."):
             try:
-                lora_meta = api_client.get_model_metadata(MODEL_TYPE, "loras", selected_lora)
+                lora_meta = api_cache.get_model_metadata(MODEL_TYPE, "loras", selected_lora)
                 lora_metadata = {
                     "name": selected_lora,
                     "lora_path": lora_meta.get("path"),
@@ -111,7 +104,7 @@ with sd15_info:
     vae_selection, vae_info = st.columns([1, 2], border=True)
 
     try:
-        vae_response = api_client.list_models(MODEL_TYPE, "vaes")
+        vae_response = api_cache.list_models(MODEL_TYPE, "vaes")
         vae_options = {m["name"]: m for m in vae_response["models"]}
     except Exception:
         vae_options = {}
@@ -125,7 +118,7 @@ with sd15_info:
     if selected_vae:
         with st.spinner("Loading VAE Metadata..."):
             try:
-                vae_meta = api_client.get_model_metadata(MODEL_TYPE, "vaes", selected_vae)
+                vae_meta = api_cache.get_model_metadata(MODEL_TYPE, "vaes", selected_vae)
                 vae_metadata = {
                     "vae_checkpoint": selected_vae,
                     "vae_path": vae_meta.get("path"),
@@ -142,7 +135,7 @@ with sd15_merger:
     st.markdown("*Merge two SD1.5 models using different methods via API*")
 
     try:
-        models_response = api_client.list_models(MODEL_TYPE, "checkpoints")
+        models_response = api_cache.list_models(MODEL_TYPE, "checkpoints")
         model_options = {m["name"]: m for m in models_response["models"]}
     except Exception as e:
         st.error(f"Failed to load models from API: {e}")
@@ -187,62 +180,38 @@ with sd15_merger:
         st.markdown("**💾 Output Settings**")
         output_name = st.text_input(
             "Output Filename",
-            value=f"merged_{merge_method}_{selected_checkpoint_a.split('.')[0]}.safetensors",
+            value=f"merged_{merge_method}_{(selected_checkpoint_a or 'model').split('.')[0]}.safetensors",
         )
         do_advanced_merge = st.button(
             f"🔬 {merge_method.upper()} Merge",
             type="primary",
+            disabled=not (selected_checkpoint_a and selected_checkpoint_b),
         )
 
     merge_column, output_column = st.columns([2, 2])
 
     if do_advanced_merge:
         try:
-            with st.spinner(f"🔄 Executing {merge_method.upper()} merge..."):
-                merge_progress = st.progress(0, text="Merging...")
+            job_id, _ = api_client.merge_models(
+                model_type=MODEL_TYPE,
+                base_model=selected_checkpoint_a,
+                target_model=selected_checkpoint_b,
+                method=merge_method,
+                alpha=alpha,
+                output_name=output_name,
+                preserve_metadata=preserve_metadata,
+            )
+            with merge_column:
+                result = wait_for_job_with_progress(
+                    api_client, job_id, f"🔄 {merge_method.upper()} merge", timeout=3600.0
+                )["result"]
+            api_cache.clear_model_cache()
 
-                # Submit merge job to API
-                job_id, _ = api_client.merge_models(
-                    model_type=MODEL_TYPE,
-                    base_model=selected_checkpoint_a,
-                    target_model=selected_checkpoint_b,
-                    method=merge_method,
-                    alpha=alpha,
-                    output_name=output_name,
-                    preserve_metadata=preserve_metadata,
-                )
+            merge_column.success("✅ Merge completed successfully!")
+            merge_column.info(f"📁 Saved to: {result.get('output_path', output_name)}")
 
-                # Poll for completion with progress updates
-                while True:
-                    status = api_client.get_job_status(job_id)
-
-                    if status["status"] == "running":
-                        progress = status.get("progress", 0.0)
-                        merge_progress.progress(progress, text=f"Merging... {int(progress*100)}%")
-                        time.sleep(0.5)
-                    elif status["status"] == "completed":
-                        merge_progress.progress(1.0, text="Complete!")
-                        merge_column.success("✅ Merge completed successfully!")
-                        merge_column.info(f"📁 Saved to: {output_name}")
-
-                        with output_column.expander("📊 Merge Details", expanded=True):
-                            st.json({
-                                "method": merge_method,
-                                "alpha": alpha,
-                                "base_model": selected_checkpoint_a,
-                                "target_model": selected_checkpoint_b,
-                                "output_file": output_name,
-                            })
-
-                        merge_progress.empty()
-                        break
-                    elif status["status"] == "failed":
-                        error = status.get("error", "Unknown error")
-                        st.error(f"❌ Merge failed: {error}")
-                        merge_progress.empty()
-                        break
-                    else:
-                        time.sleep(0.5)
+            with output_column.expander("📊 Merge Details", expanded=True):
+                st.json(result)
 
         except Exception as e:
             st.error(f"❌ Merge failed: {e}")
@@ -257,7 +226,7 @@ with batch_merger:
     base_model_col, base_info_col = st.columns([1, 2])
 
     try:
-        models_response = api_client.list_models(MODEL_TYPE, "checkpoints")
+        models_response = api_cache.list_models(MODEL_TYPE, "checkpoints")
         model_options = {m["name"]: m for m in models_response["models"]}
     except Exception as e:
         st.error(f"Failed to load models from API: {e}")
@@ -272,7 +241,7 @@ with batch_merger:
 
     with base_info_col:
         try:
-            base_meta = api_client.get_model_metadata(MODEL_TYPE, "checkpoints", selected_base)
+            base_meta = api_cache.get_model_metadata(MODEL_TYPE, "checkpoints", selected_base)
             st.json({"base_model": selected_base, "metadata": base_meta.get("metadata", {})}, expanded=False)
         except Exception as e:
             st.json({"base_model": selected_base, "error": str(e)}, expanded=False)
@@ -310,62 +279,32 @@ with batch_merger:
 
         if st.button("🔄 Start Batch Merge", type="primary", disabled=len(target_models) == 0):
             try:
-                with st.spinner(f"🔄 Processing {len(target_models)} models..."):
-                    progress_bar = st.progress(0)
-                    status_text = st.empty()
+                job_id, _ = api_client.batch_merge_models(
+                    model_type=MODEL_TYPE,
+                    base_model=selected_base,
+                    target_models=target_models,
+                    method=batch_method,
+                    alpha=batch_alpha,
+                    output_subdir=output_subdir,
+                    preserve_metadata=preserve_batch_metadata,
+                )
+                result = wait_for_job_with_progress(
+                    api_client,
+                    job_id,
+                    f"🔄 Processing {len(target_models)} models",
+                    timeout=3600.0,
+                )["result"]
+                api_cache.clear_model_cache()
 
-                    # Submit batch merge job to API
-                    job_id, _ = api_client.batch_merge_models(
-                        model_type=MODEL_TYPE,
-                        base_model=selected_base,
-                        target_models=target_models,
-                        method=batch_method,
-                        alpha=batch_alpha,
-                        output_subdir=output_subdir,
-                        preserve_metadata=preserve_batch_metadata,
-                    )
+                output_paths = result.get("output_paths", [])
+                st.markdown("#### 📊 Batch Results")
+                st.metric("Successful Merges", f"{len(output_paths)}/{len(target_models)}")
+                st.dataframe([{"Path": path} for path in output_paths], width="content")
 
-                    # Poll for completion with progress
-                    while True:
-                        status = api_client.get_job_status(job_id)
-
-                        if status["status"] == "running":
-                            progress = status.get("progress", 0.0)
-                            progress_bar.progress(progress)
-                            status_text.text(f"Processing batch... {int(progress*100)}%")
-                            time.sleep(0.5)
-                        elif status["status"] == "completed":
-                            progress_bar.empty()
-                            status_text.empty()
-
-                            result = status.get("result", {})
-                            results = result.get("results", [])
-
-                            st.markdown("#### 📊 Batch Results")
-                            successful = sum(1 for r in results if r.get("success", False))
-                            st.metric("Successful Merges", f"{successful}/{len(results)}")
-                            st.dataframe([
-                                {
-                                    "Model": r.get("model", ""),
-                                    "Status": "✅ Success" if r.get("success", False) else "❌ Failed",
-                                    "Path": r.get("path", "N/A")
-                                }
-                                for r in results
-                            ], width='content')
-
-                            if successful > 0:
-                                st.success(f"✅ Batch processing completed! {successful} models merged.")
-                            else:
-                                st.error("❌ Batch processing failed for all models.")
-                            break
-                        elif status["status"] == "failed":
-                            error = status.get("error", "Unknown error")
-                            st.error(f"❌ Batch processing failed: {error}")
-                            progress_bar.empty()
-                            status_text.empty()
-                            break
-                        else:
-                            time.sleep(0.5)
+                if output_paths:
+                    st.success(f"✅ Batch processing completed! {len(output_paths)} models merged.")
+                else:
+                    st.error("❌ Batch processing failed for all models.")
 
             except Exception as e:
                 st.error(f"❌ Batch processing failed: {e}")
@@ -384,7 +323,7 @@ with recipe_builder:
     st.markdown("#### 📋 Recipe Configuration")
 
     try:
-        models_response = api_client.list_models(MODEL_TYPE, "checkpoints")
+        models_response = api_cache.list_models(MODEL_TYPE, "checkpoints")
         model_options = {m["name"]: m for m in models_response["models"]}
     except Exception as e:
         st.error(f"Failed to load models from API: {e}")
@@ -458,45 +397,33 @@ with recipe_builder:
 
         with exec_pane:
             if st.button("🧪 Execute Recipe", type="primary", disabled=len(st.session_state.current_recipe["steps"]) == 0):
+                api_steps = [
+                    {
+                        "target_model": step["target_model"],
+                        "method": step["method"],
+                        "alpha": step["alpha"],
+                    }
+                    for step in st.session_state.current_recipe["steps"]
+                ]
                 try:
-                    with st.spinner(f"🧪 Executing {len(st.session_state.current_recipe['steps'])}-step recipe..."):
-                        # Convert recipe steps to API format (already in correct format)
-                        api_steps = []
-                        for step in st.session_state.current_recipe["steps"]:
-                            api_steps.append({
-                                "target_model": step["target_model"],
-                                "method": step["method"],
-                                "alpha": step["alpha"],
-                            })
+                    job_id, _ = api_client.recipe_merge_models(
+                        model_type=MODEL_TYPE,
+                        base_model=recipe_base,
+                        steps=api_steps,
+                        output_name=recipe_output,
+                    )
+                    result = wait_for_job_with_progress(
+                        api_client,
+                        job_id,
+                        f"🧪 Executing {len(api_steps)}-step recipe",
+                        timeout=3600.0,
+                    )["result"]
+                    api_cache.clear_model_cache()
 
-                        # Submit recipe job to API
-                        job_id, _ = api_client.recipe_merge_models(
-                            model_type=MODEL_TYPE,
-                            base_model=recipe_base,
-                            steps=api_steps,
-                            output_name=recipe_output,
-                        )
-
-                        # Poll for completion
-                        while True:
-                            status = api_client.get_job_status(job_id)
-
-                            if status["status"] == "completed":
-                                st.success("✅ Recipe executed successfully!")
-                                st.info(f"📁 Saved to: {recipe_output}")
-                                with result_pane.expander("📊 Recipe Summary"):
-                                    st.json({
-                                        "base_model": recipe_base,
-                                        "steps_count": len(st.session_state.current_recipe["steps"]),
-                                        "output_file": recipe_output,
-                                    })
-                                break
-                            elif status["status"] == "failed":
-                                error = status.get("error", "Unknown error")
-                                st.error(f"❌ Recipe execution failed: {error}")
-                                break
-                            else:
-                                time.sleep(0.5)
+                    st.success("✅ Recipe executed successfully!")
+                    st.info(f"📁 Saved to: {result.get('output_path', recipe_output)}")
+                    with result_pane.expander("📊 Recipe Summary"):
+                        st.json(result)
 
                 except Exception as e:
                     st.error(f"❌ Recipe execution failed: {e}")

@@ -6,10 +6,10 @@ Provides a single point of configuration loading and caching for the entire app.
 All pages should import from here instead of loading config independently.
 """
 
+import os
 from dataclasses import dataclass
 from functools import lru_cache
-from pathlib import Path
-from typing import Dict, Any, Union
+from typing import Dict, Any
 
 from dotenv import dotenv_values
 from yaml import safe_load, YAMLError
@@ -18,17 +18,7 @@ from libs.shared.parameters import Parameters
 from libs.shared.exceptions import ConfigurationError
 
 
-# path sanity check: create if not existing
-def check_or_create_path(target_path: Union[str, Path]) -> None:
-    """
-    Ensure a directory exists, creating it if necessary.
-
-    Args:
-        target_path: Path to the directory
-    """
-    path = Path(target_path) if isinstance(target_path, str) else target_path
-    if not path.is_dir():
-        path.mkdir(parents=True, exist_ok=True)
+DEFAULT_API_URL = "http://localhost:8000"
 
 
 @dataclass
@@ -36,8 +26,7 @@ class AppConfig:
     """
     Centralized application configuration container.
 
-    Provides access to all configuration parameters and utility methods
-    for path management.
+    Provides access to all configuration parameters.
     """
 
     env: Dict[str, str]
@@ -45,47 +34,20 @@ class AppConfig:
     parameters: Parameters
 
     @property
-    def output_images_path(self) -> str:
-        return self.parameters.storage.output_images
-
-    @property
-    def output_json_path(self) -> str:
-        return self.parameters.storage.output_json
-
-    def setup_paths(self) -> None:
-        """Create all required directories if they don't exist."""
-        paths = [
-            self.output_images_path,
-            self.output_json_path,
-        ]
-        for path in paths:
-            check_or_create_path(path)
-
-    def get_output_path(self, filename: str, output_type: str = "images") -> Path:
+    def api_url(self) -> str:
         """
-        Get full output path for a file.
+        Base URL of the Stable Diffusion API backend.
 
-        Args:
-            filename: The filename to save
-            output_type: Either 'images' or 'json'
-
-        Returns:
-            Full Path object to the output file
-
-        Raises:
-            ConfigurationError: If output_type is not 'images' or 'json'
+        Resolution order: SD_API_URL process env var, SD_API_URL in .env,
+        api.url in the YAML config, then DEFAULT_API_URL.
         """
-        if output_type not in ("images", "json"):
-            raise ConfigurationError(
-                f"Invalid output_type: {output_type}. Must be 'images' or 'json'"
-            )
-
-        if output_type == "images":
-            base_path = self.output_images_path
-        else:  # json
-            base_path = self.output_json_path
-
-        return Path(base_path) / filename
+        yaml_api = getattr(self.parameters, "api", None)
+        return (
+            os.environ.get("SD_API_URL")
+            or self.env.get("SD_API_URL")
+            or getattr(yaml_api, "url", None)
+            or DEFAULT_API_URL
+        )
 
 
 def _load_yaml_config(config_file: str) -> Dict[str, Any]:
@@ -119,20 +81,15 @@ def get_app_config(env_file: str = ".env") -> AppConfig:
     config_file = env.get("CONFIG_FILE", "parameters.yaml")
 
     # Load YAML configuration
-    config_dict = _load_yaml_config(config_file)
+    config_dict = _load_yaml_config(config_file) or {}
     parameters = Parameters(config_dict)
 
     # Create and return config object
-    config = AppConfig(
+    return AppConfig(
         env=dict(env),
         config_file=config_file,
         parameters=parameters,
     )
-
-    # Ensure all paths exist
-    config.setup_paths()
-
-    return config
 
 
 def clear_config_cache() -> None:

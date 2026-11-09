@@ -8,7 +8,7 @@ Handles all communication with the FastAPI backend for image generation.
 import base64
 import time
 from io import BytesIO
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import requests
 from PIL import Image
@@ -169,7 +169,7 @@ class SDAPIClient:
         self,
         model_type: str,
         requests: List[Dict[str, Any]],
-    ) -> List[Dict[str, Any]]:
+    ) -> Dict[str, Any]:
         """Generate multiple images in a batch.
 
         Args:
@@ -177,7 +177,7 @@ class SDAPIClient:
             requests: List of generation requests
 
         Returns:
-            List of job responses
+            Dict with "job_ids" (one per request, in order) and "message"
         """
         payload = {"requests": requests}
         response = self._make_request(
@@ -197,7 +197,7 @@ class SDAPIClient:
         cfg_scale: float = 7.0,
         seed: int = 42,
         scheduler: str = "DPM++ 2M",
-    ) -> List[Dict[str, Any]]:
+    ) -> Dict[str, Any]:
         """Generate images from multiple models for comparison.
 
         Args:
@@ -213,7 +213,7 @@ class SDAPIClient:
             scheduler: Noise scheduler name
 
         Returns:
-            List of job responses
+            Dict with "comparisons" (list of {"model", "job_id"}) and "message"
         """
         payload = {
             "positive_prompt": positive_prompt,
@@ -261,7 +261,11 @@ class SDAPIClient:
         self._make_request("DELETE", f"/api/v1/jobs/{job_id}")
 
     def wait_for_job(
-        self, job_id: str, poll_interval: float = 1.0, timeout: float = 300.0
+        self,
+        job_id: str,
+        poll_interval: float = 1.0,
+        timeout: float = 300.0,
+        on_progress: Optional[Callable[[str, float], None]] = None,
     ) -> Dict[str, Any]:
         """Wait for a job to complete.
 
@@ -269,13 +273,15 @@ class SDAPIClient:
             job_id: Job ID to wait for
             poll_interval: Seconds between status checks
             timeout: Maximum seconds to wait
+            on_progress: Optional callback invoked with (status, progress)
+                on every poll while the job is queued or running
 
         Returns:
             Final job status response
 
         Raises:
             TimeoutError: If job doesn't complete within timeout
-            RuntimeError: If job fails
+            RuntimeError: If job fails or is cancelled
         """
         start_time = time.time()
         while True:
@@ -287,9 +293,13 @@ class SDAPIClient:
             if status["status"] == "completed":
                 return status
             elif status["status"] == "failed":
-                error = status.get("error", "Unknown error")
+                error = status.get("error") or "Unknown error"
                 raise RuntimeError(f"Job {job_id} failed: {error}")
-            elif status["status"] in ("pending", "running"):
+            elif status["status"] == "cancelled":
+                raise RuntimeError(f"Job {job_id} was cancelled")
+            elif status["status"] in ("queued", "pending", "running"):
+                if on_progress:
+                    on_progress(status["status"], status.get("progress") or 0.0)
                 time.sleep(poll_interval)
             else:
                 raise RuntimeError(f"Unknown job status: {status['status']}")
@@ -324,6 +334,7 @@ class SDAPIClient:
         loras: Optional[List[Dict[str, Any]]] = None,
         custom_vae: Optional[str] = None,
         timeout: float = 300.0,
+        on_progress: Optional[Callable[[str, float], None]] = None,
     ) -> Tuple[Image.Image, Dict[str, Any]]:
         """Generate an image and wait for completion.
 
@@ -341,6 +352,7 @@ class SDAPIClient:
             loras: List of LoRA configs
             custom_vae: Custom VAE checkpoint
             timeout: Maximum seconds to wait
+            on_progress: Optional (status, progress) callback
 
         Returns:
             Tuple of (PIL Image, generation parameters)
@@ -360,7 +372,9 @@ class SDAPIClient:
             custom_vae=custom_vae,
         )
 
-        job_status = self.wait_for_job(job_id, timeout=timeout)
+        job_status = self.wait_for_job(
+            job_id, timeout=timeout, on_progress=on_progress
+        )
         result = job_status["result"]
         image = self.decode_image_from_result(result)
         
@@ -550,6 +564,7 @@ class SDAPIClient:
         loras: Optional[List[Dict[str, Any]]] = None,
         custom_vae: Optional[str] = None,
         timeout: float = 300.0,
+        on_progress: Optional[Callable[[str, float], None]] = None,
     ) -> Tuple[Image.Image, Dict[str, Any]]:
         """Inpaint an image and wait for completion.
 
@@ -567,6 +582,7 @@ class SDAPIClient:
             loras: List of LoRA configs
             custom_vae: Custom VAE checkpoint
             timeout: Maximum seconds to wait
+            on_progress: Optional (status, progress) callback
 
         Returns:
             Tuple of (PIL Image, generation parameters)
@@ -586,7 +602,9 @@ class SDAPIClient:
             custom_vae=custom_vae,
         )
 
-        job_status = self.wait_for_job(job_id, timeout=timeout)
+        job_status = self.wait_for_job(
+            job_id, timeout=timeout, on_progress=on_progress
+        )
         result = job_status["result"]
         output_image = self.decode_image_from_result(result)
 

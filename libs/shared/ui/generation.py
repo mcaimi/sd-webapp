@@ -5,7 +5,7 @@ Generation Settings UI Components
 Provides Streamlit UI for generation parameters and prompts.
 """
 
-from typing import Tuple
+from typing import Any, Dict, Tuple
 
 import streamlit as st
 
@@ -121,3 +121,39 @@ def create_prompt_inputs(
         placeholder="Write here what you don't want in the image",
     )
     return positive_prompt, negative_prompt
+
+
+def wait_for_job_with_progress(
+    api_client: SDAPIClient,
+    job_id: str,
+    label: str,
+    timeout: float = 600.0,
+) -> Dict[str, Any]:
+    """
+    Wait for an API job while rendering a progress bar.
+
+    The progress bar is removed once the job finishes, fails or is cancelled.
+
+    Args:
+        api_client: API client instance
+        job_id: Job to wait for
+        label: Text shown next to the progress bar
+        timeout: Maximum seconds to wait
+
+    Returns:
+        Final job status response
+
+    Raises:
+        TimeoutError: If the job doesn't complete within timeout
+        RuntimeError: If the job fails or is cancelled
+    """
+    progress_bar = st.progress(0.0, text=f"{label}: submitted")
+
+    def on_progress(status: str, progress: float) -> None:
+        progress = min(max(progress, 0.0), 1.0)
+        progress_bar.progress(progress, text=f"{label}: {status} {int(progress * 100)}%")
+
+    try:
+        return api_client.wait_for_job(job_id, timeout=timeout, on_progress=on_progress)
+    finally:
+        progress_bar.empty()

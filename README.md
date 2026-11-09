@@ -1,7 +1,8 @@
 # Stable Diffusion Web App
 
-This is a Stable-Diffusion Web Application written using Streamlit, Pytorch/Torchvision and HuggingFace Diffusers
-With proper hardware, it can generate images locally from pre-trained Stable Diffusion Models.
+This is a Stable-Diffusion Web Application written using Streamlit.
+Image generation, inpainting and model merging are delegated to the [sd-api-backend](../sd-api-backend) REST service,
+so the frontend itself needs no GPU or model files.
 
 To download model checkpoints, have a look at [HuggingFace](https://huggingface.co/models?pipeline_tag=text-to-image&library=safetensors&sort=trending).
 
@@ -9,18 +10,21 @@ To download model checkpoints, have a look at [HuggingFace](https://huggingface.
 
 ## Run Locally
 
-The application expects to find model checkpoints files in the `models/stable-diffusion` folder, and loras in `models/loras` folder.
+Start the `sd-api-backend` service first (model checkpoints, LoRAs and VAEs live on the backend), then:
 
 ```
 $ uv run streamlit run main.py
 ```
 
-It tries to use any discovered GPU that is supported by pytorch, but it can run on CPU (*very* slowly)
+The backend URL defaults to `http://localhost:8000`. Override it with the `SD_API_URL` environment variable
+(or a `SD_API_URL=` entry in `.env`), or set `api.url` in `parameters.yaml`:
 
-Tested:
-- Apple Metal Performance Shaders
-- NVIDIA CUDA
-- AMD CPU
+```
+$ SD_API_URL=http://gpu-host:8000 uv run streamlit run main.py
+```
+
+Generated images are persisted by the backend (`storage.persist_to_backend`); the UI offers PNG and
+parameter-JSON downloads for each result. A downloaded JSON can be loaded back to restore generation settings.
 
 ## Current supported features
 

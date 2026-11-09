@@ -13,11 +13,10 @@ import json
 
 import streamlit as st
 
-from libs.shared.config import get_app_config
 from libs.shared.models import GenerationSettings
-from libs.shared.ui.generation import create_prompt_inputs
+from libs.shared.ui.generation import create_prompt_inputs, wait_for_job_with_progress
 from libs.shared.ui.display import display_generation_results
-from libs.shared.api_client import SDAPIClient
+from libs.shared import api_cache
 from libs.shared.utils import GenerationMetadata
 from libs.globals.vars import RANDOM_BIT_LENGTH
 from libs.shared.utils import get_random_seed
@@ -25,8 +24,7 @@ from libs.shared.utils import get_random_seed
 
 # Configuration
 MODEL_TYPE = "sdxl"
-config = get_app_config()
-api_client = SDAPIClient()
+api_client = api_cache.get_api_client()
 
 # Load header
 st.html("assets/sdxl_header.html")
@@ -36,14 +34,14 @@ st.html("assets/sdxl_header.html")
 with st.sidebar:
     # Check API health
     try:
-        health = api_client.health_check()
+        health = api_cache.health_check()
         st.success(f"API: {health['status']}")
     except Exception as e:
         st.error(f"API unavailable: {e}")
 
     # Model selection
     try:
-        models_response = api_client.list_models(MODEL_TYPE, "checkpoints")
+        models_response = api_cache.list_models(MODEL_TYPE, "checkpoints")
         model_options = {m["name"]: m for m in models_response["models"]}
     except Exception as e:
         st.error(f"Failed to load models: {e}")
@@ -60,7 +58,7 @@ with st.sidebar:
     if selected_model:
         with st.spinner("Loading Model Metadata..."):
             try:
-                metadata_response = api_client.get_model_metadata(
+                metadata_response = api_cache.get_model_metadata(
                     MODEL_TYPE, "checkpoints", selected_model
                 )
                 model_metadata["metadata"] = metadata_response.get("metadata", {})
@@ -69,7 +67,7 @@ with st.sidebar:
 
     # LoRA selection
     try:
-        loras_response = api_client.list_models(MODEL_TYPE, "loras")
+        loras_response = api_cache.list_models(MODEL_TYPE, "loras")
         lora_options = {m["name"]: m for m in loras_response["models"]}
     except Exception:
         lora_options = {}
@@ -96,7 +94,7 @@ with st.sidebar:
         lora_configs.append({"name": lora_name, "strength": strength})
 
         try:
-            lora_meta = api_client.get_model_metadata(MODEL_TYPE, "loras", lora_name)
+            lora_meta = api_cache.get_model_metadata(MODEL_TYPE, "loras", lora_name)
             lora_metadata[f"lora_{i}"] = {
                 "name": lora_name,
                 "merge_strength": strength,
@@ -115,7 +113,7 @@ with st.sidebar:
     custom_vae = None
     if override_vae:
         try:
-            vae_response = api_client.list_models(MODEL_TYPE, "vaes")
+            vae_response = api_cache.list_models(MODEL_TYPE, "vaes")
             vae_options = {m["name"]: m for m in vae_response["models"]}
         except Exception:
             vae_options = {}
@@ -130,7 +128,7 @@ with st.sidebar:
         if selected_vae:
             with st.spinner("Loading VAE Metadata..."):
                 try:
-                    vae_meta = api_client.get_model_metadata(
+                    vae_meta = api_cache.get_model_metadata(
                         MODEL_TYPE, "vaes", selected_vae
                     )
                     vae_metadata = {
@@ -145,7 +143,7 @@ with st.sidebar:
 
     # System info
     try:
-        sys_info = api_client.get_system_info()
+        sys_info = api_cache.get_system_info()
         st.markdown(f"**Device: {sys_info['device']}**")
     except Exception:
         st.markdown("**Device: Unknown**")
@@ -157,7 +155,7 @@ st.markdown("*Generate images using Stable Diffusion XL models.*")
 
 # Fetch available schedulers from API
 try:
-    available_schedulers = api_client.list_schedulers()
+    available_schedulers = api_cache.list_schedulers()
 except Exception as e:
     st.error(f"Failed to fetch schedulers: {e}")
     available_schedulers = ["DPM++ 2M"]  # Fallback default
@@ -178,8 +176,13 @@ prev_gen_file = st.file_uploader(
     accept_multiple_files=False,
     type="json",
 )
+prev_metadata = None
 if prev_gen_file is not None:
-    prev_metadata = GenerationMetadata(json.load(prev_gen_file))
+    try:
+        prev_metadata = GenerationMetadata(json.load(prev_gen_file))
+    except (ValueError, json.JSONDecodeError) as e:
+        st.error(f"Invalid parameters file: {e}")
+if prev_metadata is not None:
     defaults.positive_prompt = prev_metadata.prompt or ""
     defaults.negative_prompt = prev_metadata.negative_prompt or ""
     defaults.guidance_scale = prev_metadata.guidance_scale or defaults.guidance_scale
@@ -238,7 +241,15 @@ with st.expander("Generation Settings..."):
         )
 
 # === TABS ===
+RESULTS_KEY = f"{MODEL_TYPE}_generated_pixmaps"
 image_gen_tab, model_comparison_tab = st.tabs(["Image Generation", "Model Comparison"])
+
+
+
+def wait_for_image(job_id: str, label: str):
+    """Poll a generation job, showing progress, and return (image, result)."""
+    result = wait_for_job_with_progress(api_client, job_id, label)["result"]
+    return api_client.decode_image_from_result(result), result
 
 with image_gen_tab:
     gen_info_col, gen_btn_col = st.columns([2, 1])
@@ -259,35 +270,46 @@ with image_gen_tab:
                 f"Seed {seed} is constant and batch size is {batch_size}: Images will be identical."
             )
 
-        for i in range(batch_size):
-            gen_seed = seed if seed > 0 else get_random_seed(RANDOM_BIT_LENGTH)
+        requests = [
+            {
+                "positive_prompt": positive_prompt,
+                "negative_prompt": negative_prompt,
+                "model_checkpoint": selected_model,
+                "width": int(width),
+                "height": int(height),
+                "steps": int(inference_steps),
+                "cfg_scale": guidance,
+                "seed": seed if seed > 0 else get_random_seed(RANDOM_BIT_LENGTH),
+                "scheduler": scheduler_type,
+                "loras": lora_configs or None,
+                "custom_vae": custom_vae,
+            }
+            for _ in range(batch_size)
+        ]
+        scheduler_config = {"_class_name": scheduler_type}
 
-            with st.spinner(f"Generating image {i + 1}/{batch_size}..."):
-                try:
-                    image, output_parameters = api_client.generate_and_wait(
-                        model_type=MODEL_TYPE,
-                        positive_prompt=positive_prompt,
-                        negative_prompt=negative_prompt,
-                        model_checkpoint=selected_model,
-                        width=int(width),
-                        height=int(height),
-                        steps=int(inference_steps),
-                        cfg_scale=guidance,
-                        seed=gen_seed,
-                        scheduler=scheduler_type,
-                        loras=lora_configs if lora_configs else None,
-                        custom_vae=custom_vae,
-                        timeout=600.0,
-                    )
+        try:
+            job_ids = api_client.batch_generate(MODEL_TYPE, requests)["job_ids"]
+        except Exception as e:
+            st.error(f"Generation failed: {e}")
+            job_ids = []
 
-                    # Format output to match original structure
-                    scheduler_config = {"_class_name": scheduler_type}
-                    generated_pixmaps.append(
-                        (image, output_parameters, scheduler_config, gen_seed)
+        for i, job_id in enumerate(job_ids):
+            try:
+                image, result = wait_for_image(job_id, f"Image {i + 1}/{len(job_ids)}")
+                generated_pixmaps.append(
+                    (
+                        image,
+                        result.get("metadata", {}),
+                        scheduler_config,
+                        result.get("seed", requests[i]["seed"]),
+                        selected_model,
                     )
-                except Exception as e:
-                    st.error(f"Generation failed: {e}")
-                    break
+                )
+            except Exception as e:
+                st.error(f"Image {i + 1} failed: {e}")
+
+        st.session_state[RESULTS_KEY] = (generated_pixmaps, lora_metadata)
 
 with model_comparison_tab:
     comp_info_col, comp_btn_col = st.columns([2, 1])
@@ -312,57 +334,53 @@ with model_comparison_tab:
     if gen_button:
         generated_pixmaps = []
         gen_seed = seed if seed > 0 else get_random_seed(RANDOM_BIT_LENGTH)
+        scheduler_config = {"_class_name": scheduler_type}
 
-        with st.spinner(f"Comparing {len(target_models)} models..."):
+        try:
+            results = api_client.compare_models(
+                model_type=MODEL_TYPE,
+                positive_prompt=positive_prompt,
+                negative_prompt=negative_prompt,
+                models=target_models,
+                width=int(width),
+                height=int(height),
+                steps=int(inference_steps),
+                cfg_scale=guidance,
+                seed=gen_seed,
+                scheduler=scheduler_type,
+            )
+            comparisons = results.get("comparisons", [])
+        except Exception as e:
+            st.error(f"Model comparison failed: {e}")
+            comparisons = []
+
+        for i, comparison in enumerate(comparisons):
+            model_name = comparison["model"]
             try:
-                results = api_client.compare_models(
-                    model_type=MODEL_TYPE,
-                    positive_prompt=positive_prompt,
-                    negative_prompt=negative_prompt,
-                    models=target_models,
-                    width=int(width),
-                    height=int(height),
-                    steps=int(inference_steps),
-                    cfg_scale=guidance,
-                    seed=gen_seed,
-                    scheduler=scheduler_type,
+                image, result = wait_for_image(
+                    comparison["job_id"], f"{model_name} ({i + 1}/{len(comparisons)})"
                 )
-                st.info(results.get("message", "No Relevant Update for now"))
-
-                # Wait for all comparison jobs
-                for i, job_response in enumerate(results.get("comparisons")):
-                    job_id = job_response["job_id"]
-                    model_name = target_models[i]
-
-                    with st.spinner(f"Processing {model_name} ({i+1}/{len(target_models)})..."):
-                        try:
-                            job_status = api_client.wait_for_job(job_id, timeout=600.0)
-                            result = job_status["result"]
-                            image = api_client.decode_image_from_result(result)
-                            output_parameters = result.get("parameters", {})
-
-                            # Update model metadata for display
-                            temp_metadata = model_metadata.copy()
-                            temp_metadata["model_checkpoint"] = model_name
-
-                            scheduler_config = {"_class_name": scheduler_type}
-                            generated_pixmaps.append(
-                                (image, output_parameters, scheduler_config, gen_seed)
-                            )
-                        except Exception as e:
-                            st.error(f"Failed to generate with {model_name}: {e}")
-
+                generated_pixmaps.append(
+                    (
+                        image,
+                        result.get("metadata", {}),
+                        scheduler_config,
+                        result.get("seed", gen_seed),
+                        model_name,
+                    )
+                )
             except Exception as e:
-                st.error(f"Model comparison failed: {e}")
+                st.error(f"Failed to generate with {model_name}: {e}")
+
+        st.session_state[RESULTS_KEY] = (generated_pixmaps, lora_metadata)
 
 # === OUTPUT SECTION ===
-try:
-    if generated_pixmaps:
-        display_generation_results(
-            generated_pixmaps=generated_pixmaps,
-            model_metadata=model_metadata,
-            lora_metadata=lora_metadata,
-            model_type=MODEL_TYPE,
-        )
-except NameError:
+if st.session_state.get(RESULTS_KEY, ([], {}))[0]:
+    stored_pixmaps, stored_lora_metadata = st.session_state[RESULTS_KEY]
+    display_generation_results(
+        generated_pixmaps=stored_pixmaps,
+        lora_metadata=stored_lora_metadata,
+        model_type=MODEL_TYPE,
+    )
+else:
     st.info("Select generation method and perform inference.")

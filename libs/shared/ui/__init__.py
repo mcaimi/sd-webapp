@@ -15,6 +15,7 @@ from libs.shared.ui.selectors import (
 from libs.shared.ui.generation import (
     create_generation_settings_ui,
     create_prompt_inputs,
+    wait_for_job_with_progress,
 )
 from libs.shared.ui.display import (
     display_generation_results,
@@ -29,6 +30,7 @@ __all__ = [
     "load_model_metadata",
     "create_generation_settings_ui",
     "create_prompt_inputs",
+    "wait_for_job_with_progress",
     "display_generation_results",
     "display_device_info",
 ]

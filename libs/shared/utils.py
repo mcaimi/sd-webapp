@@ -74,5 +74,5 @@ class GenerationMetadata:
             # Set attributes
             for k in instance_parms.keys():
                 setattr(self, f"{k}", instance_parms.get(k))
-        except (KeyError, TypeError, IndexError) as e:
+        except (AttributeError, KeyError, TypeError, IndexError) as e:
             raise ValueError(f"Cannot load metadata from dictionary: {e}") from e

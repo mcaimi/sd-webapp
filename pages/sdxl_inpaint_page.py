@@ -9,7 +9,6 @@ Provides inpainting functionality via API:
 - Custom VAE support
 """
 
-import time
 from io import BytesIO
 
 import numpy as np
@@ -17,17 +16,17 @@ import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 from PIL import Image
 
-from libs.shared.config import get_app_config
-from libs.shared.persistence import save_generation_output
-from libs.shared.api_client import SDAPIClient
+from libs.shared.ui.display import build_generation_metadata, display_download_buttons
+from libs.shared.ui.generation import wait_for_job_with_progress
+from libs.shared import api_cache
 from libs.globals.vars import RANDOM_BIT_LENGTH
 from libs.shared.utils import get_random_seed
 
 
 # Configuration
 MODEL_TYPE = "sdxl"
-config = get_app_config()
-api_client = SDAPIClient()
+RESULTS_KEY = f"{MODEL_TYPE}_inpaint_result"
+api_client = api_cache.get_api_client()
 
 # Load header
 st.html("assets/sdxl_header.html")
@@ -37,14 +36,14 @@ st.html("assets/sdxl_header.html")
 with st.sidebar:
     # API Health Check
     try:
-        health = api_client.health_check()
+        health = api_cache.health_check()
         st.success(f"API: {health['status']}", icon="✅")
     except Exception as e:
         st.error(f"API unavailable: {e}", icon="🚨")
 
     # Model selection
     try:
-        models_response = api_client.list_models(MODEL_TYPE, "checkpoints")
+        models_response = api_cache.list_models(MODEL_TYPE, "checkpoints")
         model_options = {m["name"]: m for m in models_response["models"]}
     except Exception as e:
         st.error(f"Failed to load models: {e}")
@@ -61,7 +60,7 @@ with st.sidebar:
     if selected_model:
         with st.spinner("Loading Model Metadata..."):
             try:
-                metadata_response = api_client.get_model_metadata(
+                metadata_response = api_cache.get_model_metadata(
                     MODEL_TYPE, "checkpoints", selected_model
                 )
                 model_metadata["metadata"] = metadata_response.get("metadata", {})
@@ -70,7 +69,7 @@ with st.sidebar:
 
     # LoRA selection
     try:
-        loras_response = api_client.list_models(MODEL_TYPE, "loras")
+        loras_response = api_cache.list_models(MODEL_TYPE, "loras")
         lora_options = {m["name"]: m for m in loras_response["models"]}
     except Exception:
         lora_options = {}
@@ -97,7 +96,7 @@ with st.sidebar:
         lora_configs.append({"name": lora_name, "strength": strength})
 
         try:
-            lora_meta = api_client.get_model_metadata(MODEL_TYPE, "loras", lora_name)
+            lora_meta = api_cache.get_model_metadata(MODEL_TYPE, "loras", lora_name)
             lora_metadata[f"lora_{i}"] = {
                 "name": lora_name,
                 "merge_strength": strength,
@@ -116,7 +115,7 @@ with st.sidebar:
     selected_vae_name = None
     if override_vae:
         try:
-            vae_response = api_client.list_models(MODEL_TYPE, "vaes")
+            vae_response = api_cache.list_models(MODEL_TYPE, "vaes")
             vae_options = {m["name"]: m for m in vae_response["models"]}
         except Exception:
             vae_options = {}
@@ -130,7 +129,7 @@ with st.sidebar:
 
         with st.spinner("Loading VAE Metadata..."):
             try:
-                vae_meta = api_client.get_model_metadata(MODEL_TYPE, "vaes", selected_vae)
+                vae_meta = api_cache.get_model_metadata(MODEL_TYPE, "vaes", selected_vae)
                 vae_metadata = {
                     "vae_checkpoint": selected_vae,
                     "metadata": vae_meta.get("metadata", {}),
@@ -148,7 +147,7 @@ st.markdown("*Inpaint images using Stable Diffusion XL models.*")
 
 # Fetch available schedulers from API
 try:
-    available_schedulers = api_client.list_schedulers()
+    available_schedulers = api_cache.list_schedulers()
 except Exception as e:
     st.error(f"Failed to fetch schedulers: {e}")
     available_schedulers = ["DPM++ 2M"]  # Fallback default
@@ -218,7 +217,7 @@ if uploaded_image is not None:
                 mask_image = Image.fromarray(
                     black_background + canvas_result.image_data
                 ).convert("RGBA")
-
+    
                 settings_col.image(mask_image)
 
                 # Download mask button
@@ -231,6 +230,7 @@ if uploaded_image is not None:
                     type="primary",
                     file_name="sdxl_mask.png",
                     icon=":material/download:",
+                    on_click="ignore",
                 )
 
     with upload_mask_tab:
@@ -321,94 +321,58 @@ if uploaded_image is not None:
         if submit_button and mask_image is not None:
             gen_seed = seed if seed > 0 else get_random_seed(RANDOM_BIT_LENGTH)
 
-            # Prepare LoRA configs for API
-            lora_configs = []
-            if lora_metadata:
-                for lora_key, lora_info in lora_metadata.items():
-                    lora_configs.append({
-                        "lora_name": lora_info.get("name"),
-                        "merge_strength": lora_info.get("merge_strength"),
-                    })
+            # Convert mask_image to grayscale if it's RGBA
+            if mask_image.mode == "RGBA":
+                mask_image = mask_image.convert("L")
 
+            st.session_state.pop(RESULTS_KEY, None)
             try:
-                with st.spinner("Submitting inpaint job to API..."):
-                    inpaint_progress = st.progress(0, text="Initializing...")
-
-                    # Convert mask_image to grayscale if it's RGBA
-                    if mask_image.mode == "RGBA":
-                        mask_image = mask_image.convert("L")
-
-                    # Submit inpaint job
-                    job_id, _ = api_client.inpaint_image(
-                        model_type=MODEL_TYPE,
-                        positive_prompt=positive_prompt,
-                        image=input_image,
-                        mask_image=mask_image,
-                        negative_prompt=negative_prompt,
-                        model_checkpoint=selected_model,
-                        steps=inference_steps,
-                        cfg_scale=guidance,
-                        seed=gen_seed,
-                        scheduler=scheduler_type,
-                        loras=lora_configs if lora_configs else None,
-                        custom_vae=selected_vae_name if override_vae else None,
-                    )
-
-                    # Poll for completion
-                    while True:
-                        status = api_client.get_job_status(job_id)
-
-                        if status["status"] == "running":
-                            progress = status.get("progress", 0.0)
-                            inpaint_progress.progress(progress, text=f"Inpainting... {int(progress*100)}%")
-                            time.sleep(0.5)
-                        elif status["status"] == "completed":
-                            inpaint_progress.progress(1.0, text="Complete!")
-                            inpaint_progress.empty()
-
-                            result = status.get("result", {})
-                            output_image = api_client.decode_image_from_result(result)
-                            output_parameters = result.get("metadata", {})
-
-                            st.success("Inpainting completed!")
-
-                            result_col1, result_col2 = st.columns([2, 1])
-
-                            with result_col1:
-                                st.markdown("**Inpainted Result**")
-                                st.image(output_image, width="content")
-
-                            with result_col2:
-                                st.markdown("**Generation Parameters**")
-                                gen_json = {
-                                    "model_name": model_metadata.get("model_checkpoint"),
-                                    "loras": lora_configs,
-                                    "output_parameters": output_parameters,
-                                    "seed": gen_seed,
-                                }
-                                st.json(gen_json, expanded=False)
-
-                            # Save outputs
-                            save_generation_output(
-                                output_image=output_image,
-                                output_parameters=output_parameters,
-                                model_metadata=model_metadata,
-                                lora_metadata=lora_metadata,
-                                scheduler_config=None,
-                                seed=gen_seed,
-                                model_type=MODEL_TYPE,
-                                prefix="inpaint",
-                            )
-                            break
-                        elif status["status"] == "failed":
-                            error = status.get("error", "Unknown error")
-                            st.error(f"❌ Inpainting failed: {error}")
-                            inpaint_progress.empty()
-                            break
-                        else:
-                            time.sleep(0.5)
-
+                job_id, _ = api_client.inpaint_image(
+                    model_type=MODEL_TYPE,
+                    positive_prompt=positive_prompt,
+                    image=input_image,
+                    mask_image=mask_image,
+                    negative_prompt=negative_prompt,
+                    model_checkpoint=selected_model,
+                    steps=inference_steps,
+                    cfg_scale=guidance,
+                    seed=gen_seed,
+                    scheduler=scheduler_type,
+                    loras=lora_configs or None,
+                    custom_vae=selected_vae_name if override_vae else None,
+                )
+                result = wait_for_job_with_progress(api_client, job_id, "Inpainting")[
+                    "result"
+                ]
+                gen_json = build_generation_metadata(
+                    selected_model,
+                    lora_metadata,
+                    result.get("metadata", {}),
+                    {"_class_name": scheduler_type},
+                )
+                st.session_state[RESULTS_KEY] = (
+                    api_client.decode_image_from_result(result),
+                    gen_json,
+                    result.get("seed", gen_seed),
+                )
             except Exception as e:
-                st.error(f"❌ API request failed: {e}")
+                st.error(f"❌ Inpainting failed: {e}")
+
+        if st.session_state.get(RESULTS_KEY):
+            output_image, gen_json, result_seed = st.session_state[RESULTS_KEY]
+            st.success("Inpainting completed!")
+
+            result_col1, result_col2 = st.columns([2, 1])
+
+            with result_col1:
+                st.markdown("**Inpainted Result**")
+                st.image(output_image, width="content")
+
+            with result_col2:
+                st.markdown("**Generation Parameters**")
+                st.json(gen_json, expanded=False)
+                display_download_buttons(
+                    output_image, gen_json, f"{MODEL_TYPE}_inpaint_{result_seed}"
+                )
 else:
     st.info("Please upload an image to begin inpainting.")
