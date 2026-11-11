@@ -1,6 +1,6 @@
 # SD Studio (web)
 
-Single-page frontend for [sd-api-backend](../../sd-api-backend), replacing the Streamlit UI.
+Single-page frontend for [sd-api-backend](https://github.com/mcaimi/sd-api-backend), replacing the Streamlit UI.
 
 **Stack:** Vite · React 19 · TypeScript · Tailwind CSS 4 · shadcn/ui (Radix) · Motion · TanStack Query ·
 React Router · openapi-fetch (types generated from the backend's OpenAPI document).

@@ -1,7 +1,7 @@
 # SD Studio
 
 A web interface for Stable Diffusion image generation, inpainting and model merging. All inference runs on the
-[sd-api-backend](../sd-api-backend) REST service; this repository is the frontend, a single-page app with no GPU
+[sd-api-backend](https://github.com/mcaimi/sd-api-backend) REST service; this repository is the frontend, a single-page app with no GPU
 or model files of its own.
 
 ![app](assets/app.png)
@@ -26,7 +26,7 @@ or model files of its own.
 
 ## Run locally
 
-With [sd-api-backend](../sd-api-backend) running on `http://localhost:8000`:
+With [sd-api-backend](https://github.com/mcaimi/sd-api-backend) running on `http://localhost:8000`:
 
 ```sh
 cd web
@@ -56,7 +56,3 @@ cd web/deploy && kustomize edit set image sd-webapp-web=quay.io/<org>/sd-webapp-
 oc apply -k web/deploy
 ```
 
-## History
-
-Up to commit `14a4628` this was a Streamlit application, first running inference locally and later calling the
-backend. It was replaced by the web app in `web/`.
