@@ -1,7 +1,6 @@
 .DS_Store
-flagged
+
+# Local leftovers from the retired Streamlit app
 __pycache__
 .venv
-models
 .python-version
-outputs

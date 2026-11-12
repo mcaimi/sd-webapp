@@ -1,0 +1,6 @@
+dist
+node_modules
+openapi.json
+src/api/schema.d.ts
+src/components/ui
+src/hooks/use-mobile.ts
