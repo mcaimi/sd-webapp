@@ -119,6 +119,16 @@ describe('useJobSync', () => {
     expect(toast.success.mock.calls[0][0]).toBe('Image ready')
   })
 
+  it('announces finished downloads by file name', async () => {
+    remote = [{ job_id: 'dl', status: 'completed', created_at: '2026-01-01T00:00:00', lane: 'io', cancellable: true }]
+    const store = await setup([tracked('dl', { kind: 'download', family: 'sd15', label: 'DreamShaper_8.safetensors' })])
+    await waitFor(() => expect(store.getAll()[0].status).toBe('completed'))
+    expect(toast.success).toHaveBeenCalledWith(
+      'Downloaded DreamShaper_8.safetensors',
+      expect.objectContaining({ description: undefined }),
+    )
+  })
+
   it('expires jobs the backend no longer knows, but not freshly submitted ones', async () => {
     remote = []
     const store = await setup([

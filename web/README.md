@@ -23,7 +23,8 @@ SD_API_URL=http://gpu-host:8000 npm run dev
 
 No GPU or models? `npm run dev:mock` runs the same UI against `scripts/mock-api.mjs`, a dependency-free
 stand-in for the backend: a sequential job queue with the real status semantics, generated PNGs, persisted gallery
-outputs and merges. A prompt containing `fail` makes the job fail; `MOCK_SPEED=0.2` slows everything down.
+outputs, merges, and a generated Civitai catalogue with downloads that report progress. A prompt containing
+`fail` makes the job fail; `MOCK_SPEED=0.2` slows everything down.
 
 In production, serve `dist/` behind a reverse proxy that forwards `/api` to the backend the same way;
 no CORS configuration or build-time API URL is needed.
@@ -64,6 +65,7 @@ After a backend API change, run `npm run api:sync` and commit both `openapi.json
   `no-cache`.
 - Uploads up to 64 MB are accepted, since inpainting posts base64 images.
 - A strict CSP is set: no inline scripts, which is why the pre-paint theme script lives in `public/theme-init.js`.
+  Images and videos may also load from `https://*.civitai.com`, for Civitai previews while browsing models.
 - `/healthz` serves the probes.
 
 `deploy/` holds Kustomize manifests (Deployment, Service, OpenShift Route with a 300 s timeout for downloads).
@@ -76,7 +78,7 @@ src/
                 types.ts (hand-written shapes the OpenAPI spec leaves untyped), schema.d.ts (generated)
   jobs/         job-store.ts (jobs submitted from this browser, persisted), use-job-sync.ts (polling,
                 toasts, cache invalidation), job-results.ts (result fetching), submit.ts (API submissions)
-  features/     one folder per page (generate, inpaint, merge, gallery, system); each route.tsx is lazy-loaded
+  features/     one folder per page (generate, inpaint, merge, models, gallery, system); each route.tsx is lazy-loaded
   lib/          families.ts (model family registry), generation.ts (form ⇄ API mapping), drafts.ts (persisted forms)
   components/   app-shell/, jobs/ (job cards, dock, results feed), form/, pickers/, lightbox, ui/ (shadcn, generated)
   routes/       router.tsx and shell-level pages
@@ -103,3 +105,14 @@ registry entry, not a new page.
 
 shadcn components are added with `npx shadcn@latest add <component>` and live in `src/components/ui`;
 they are excluded from lint and formatting so regenerated files stay diffable.
+
+### Civitai
+
+The Models page lists installed models and, when the backend has the Civitai integration enabled
+(`GET /civitai/status` answers 404 otherwise), browses and downloads from Civitai. The backend does the
+filtering: search results are limited to the family and resource type, and each file in a model's detail says
+whether it can be downloaded, where it would go and whether it's already installed. Downloads are `io`-lane jobs
+tracked like any other, with byte progress from the job's `detail`. A base model that doesn't match the family
+answers 409 with warnings, and the UI asks before resending with `accept_mismatch`. Previews rated above
+Civitai's safe level are blurred unless the backend shows NSFW content by default. Model descriptions are HTML
+written by model authors, so only their text is shown (`htmlToText` in `lib/civitai.ts`).

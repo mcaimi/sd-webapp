@@ -19,6 +19,9 @@ or model files of its own.
   support. A before/after slider compares the result with the original.
 - **Merge:** linear, SLERP, additive and subtractive merges, in single, batch or multi-step recipe mode, with
   downloads and one click to use the new checkpoint.
+- **Models:** installed checkpoints, LoRAs and VAEs with their Civitai details, one-click identification of
+  unlinked files by hash, and a Civitai browser: search with filters, version and file details with compatibility
+  checks, Flux component checks, and downloads with live progress.
 - **Gallery:** browse everything the backend has saved, view the generation details, remix an image into a new
   generation, and delete with undo.
 - **Background jobs:** keep working while jobs queue and run. A jobs panel and toasts track them, with optional

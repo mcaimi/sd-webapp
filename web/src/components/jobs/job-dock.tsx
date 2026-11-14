@@ -1,4 +1,4 @@
-import { Bell, GitMerge, ListTodo, Trash2 } from 'lucide-react'
+import { Bell, Download, GitMerge, ListTodo, Trash2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch'
 import { useJobResult } from '@/jobs/job-results'
 import { isActive, JOB_TOOL, jobStore, useTrackedJobs, type TrackedJob } from '@/jobs/job-store'
 import { notifyPreference, useNotifyPreference } from '@/jobs/use-job-sync'
+import { downloadProgressText } from '@/lib/civitai'
 import { FAMILIES } from '@/lib/families'
 import { formatRelative } from '@/lib/format'
 import { toolPath } from '@/lib/navigation'
@@ -147,6 +148,11 @@ function JobRow({ job, onNavigate }: { job: TrackedJob; onNavigate: () => void }
               <JobStatus job={job} />
               {!isActive(job) && <span className="text-xs">· {formatRelative(job.submittedAt)}</span>}
             </div>
+            {job.kind === 'download' && job.status === 'running' && (
+              <p className="truncate text-xs text-muted-foreground tabular-nums">
+                {downloadProgressText(job.detail) ?? 'Starting…'}
+              </p>
+            )}
           </div>
         </button>
         {isActive(job) ? (
@@ -170,12 +176,13 @@ function JobRow({ job, onNavigate }: { job: TrackedJob; onNavigate: () => void }
 function JobThumb({ job }: { job: TrackedJob }) {
   const result = useJobResult(job)
   const isMerge = job.kind.endsWith('merge')
+  const Icon = isMerge ? GitMerge : job.kind === 'download' ? Download : undefined
   return (
     <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
       {result.data?.type === 'image' ? (
         <img src={result.data.imageUrl} alt="" className="size-full object-cover" />
-      ) : isMerge ? (
-        <GitMerge className="size-4 text-muted-foreground" aria-hidden />
+      ) : Icon ? (
+        <Icon className="size-4 text-muted-foreground" aria-hidden />
       ) : (
         isActive(job) && <div className="shimmer size-full" />
       )}

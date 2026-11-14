@@ -9,6 +9,9 @@
 //
 // Knobs:  MOCK_PORT (8010), MOCK_SPEED (1 = realistic-ish, 0.2 = fast).
 // A prompt containing "fail" makes the job fail; "slow" makes it 5x slower.
+// Civitai: a generated catalogue per family and resource type. Downloads run
+// on a separate "io" lane with progress, taking ~2 s per GB at any speed; a file named "*-broken*" fails, a
+// Flux file named "*-locked*" needs an API key to check its components.
 import { randomUUID } from 'node:crypto'
 import http from 'node:http'
 import { deflateSync } from 'node:zlib'
@@ -106,6 +109,7 @@ function modelEntry(family, resource, name) {
 
 // Snapshot so tests can reset merges back to the original model lists.
 const initialModels = structuredClone(models)
+const initialCivitai = structuredClone(civitai)
 
 // ---------------------------------------------------------------- PNG encoding
 const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
@@ -212,7 +216,7 @@ function submit(jobType, durationMs, run) {
 }
 function pump() {
   if (running) return
-  const next = [...jobs.values()].find((j) => j.status === 'queued')
+  const next = [...jobs.values()].find((j) => j.status === 'queued' && j.lane === 'gpu')
   if (!next) return
   running = next
   next.status = 'running'
@@ -239,7 +243,7 @@ function pump() {
   }, next.durationMs)
 }
 // eslint-disable-next-line no-unused-vars -- strip internal fields
-const publicJob = ({ durationMs, run, ...job }) => job
+const publicJob = ({ durationMs, run, download, ...job }) => job
 
 // ---------------------------------------------------------------- handlers
 function generationJob(family, req, kind) {
@@ -534,14 +538,365 @@ route('DELETE', '/api/v1/outputs/:id', (_req, res, { id }) => {
   res.end()
 })
 
+// ---------------------------------------------------------------- civitai
+const CIVITAI_BASE_MODELS = {
+  sd15: ['SD 1.5'],
+  sdxl: ['SDXL 1.0', 'Pony'],
+  illustrious: ['Illustrious'],
+  flux: ['Flux.1 D', 'Flux.1 S'],
+}
+const CIVITAI_TYPES = { checkpoints: 'Checkpoint', loras: 'LORA', vaes: 'VAE' }
+const CATALOGUE_SIZE = 30
+const SORTS = ['Highest Rated', 'Most Downloaded', 'Newest']
+const PERIODS = ['AllTime', 'Year', 'Month', 'Week', 'Day']
+const NAMES = ['Dream', 'Real', 'Anime', 'Painterly', 'Cinematic', 'Pixel', 'Ink', 'Neon', 'Velvet', 'Aurora']
+
+const otherFamily = (family) => (family === 'sd15' ? 'sdxl' : 'sd15')
+const mockImageUrl = (id) => `/api/v1/__mock/civitai-image/original=true/${id}.png`
+
+/** Deterministic catalogue: ids encode family, resource and index so detail lookups need no state. */
+function catalogue(family, resource) {
+  const f = FAMILIES.indexOf(family)
+  const r = Object.keys(CIVITAI_TYPES).indexOf(resource)
+  return Array.from({ length: CATALOGUE_SIZE }, (_, i) => {
+    const id = 100000 + f * 10000 + r * 1000 + i
+    const nsfw = i % 7 === 3
+    return {
+      id,
+      name: `${NAMES[i % NAMES.length]} ${resource === 'loras' ? 'Style' : family.toUpperCase()} ${Math.floor(i / NAMES.length) + 1}`,
+      type: CIVITAI_TYPES[resource],
+      creator: `artist${i % 5}`,
+      nsfw,
+      tags: ['style', resource === 'loras' ? 'concept' : 'base model'],
+      stats: {
+        downloads: (CATALOGUE_SIZE - i) * 1371,
+        rating: 4 + (i % 10) / 10,
+        rating_count: 40 + i,
+        thumbs_up: (CATALOGUE_SIZE - i) * 97,
+        favorites: i * 3,
+      },
+      preview: { url: mockImageUrl(id), type: 'image', nsfw_level: nsfw ? 8 : 1, width: 512, height: 682 },
+      base_models: [CIVITAI_BASE_MODELS[family][0]],
+      // For sorting by "Newest".
+      published_at: new Date(Date.UTC(2026, 0, 1 + i)).toISOString(),
+    }
+  })
+}
+
+function findCatalogueModel(id) {
+  for (const family of FAMILIES)
+    for (const resource of Object.keys(CIVITAI_TYPES)) {
+      const model = catalogue(family, resource).find((m) => m.id === id)
+      if (model) return { model, family, resource }
+    }
+  return undefined
+}
+
+const fileName = (model, version, suffix = '') =>
+  `${model.name.replace(/\W+/g, '')}_${version}${suffix}.safetensors`.replace(/_+/g, '_')
+
+/** Versions of a catalogue model, as GET /civitai/models/{id} normalizes them for `browsing` family. */
+function versionsFor(model, family, resource, browsing) {
+  const versionId = (n) => model.id * 10 + n
+  const fileId = (n, k) => versionId(n) * 10 + k
+  const words = resource === 'loras' ? [`${model.name.split(' ')[0].toLowerCase()}style`] : []
+  const versions = [
+    { n: 1, name: 'v2.0', family, base: CIVITAI_BASE_MODELS[family][0] },
+    { n: 2, name: 'v1.0', family, base: CIVITAI_BASE_MODELS[family][0] },
+    {
+      n: 3,
+      name: `v1.0 ${otherFamily(family).toUpperCase()}`,
+      family: otherFamily(family),
+      base: CIVITAI_BASE_MODELS[otherFamily(family)][0],
+    },
+  ]
+  return versions.map((v) => {
+    const warnings = v.family !== browsing ? [`Made for ${v.base} (${v.family}), not ${browsing}`] : []
+    const files = [
+      {
+        id: fileId(v.n, 1),
+        name: fileName(model, v.name.replace(/\W+/g, '')),
+        size_bytes: resource === 'checkpoints' ? 2_132_625_408 : 151_000_000,
+        type: 'Model',
+        format: 'SafeTensor',
+        fp: 'fp16',
+        size_variant: 'pruned',
+        sha256: `${model.id}${v.n}`.padEnd(64, '0'),
+        primary: true,
+        target_resource_type: resource,
+        compatible: true,
+        reason: null,
+        warnings,
+      },
+      {
+        id: fileId(v.n, 2),
+        name: fileName(model, v.name.replace(/\W+/g, ''), '_full').replace('.safetensors', '.ckpt'),
+        size_bytes: 4_265_250_816,
+        type: 'Model',
+        format: 'PickleTensor',
+        fp: 'fp32',
+        size_variant: 'full',
+        sha256: `${model.id}${v.n}2`.padEnd(64, '0'),
+        primary: false,
+        target_resource_type: resource,
+        compatible: false,
+        reason: 'PickleTensor format not supported',
+        warnings: [],
+      },
+    ]
+    if (resource === 'checkpoints' && v.n === 1) {
+      files.push({
+        id: fileId(v.n, 3),
+        name: `${model.name.replace(/\W+/g, '')}_vae.safetensors`,
+        size_bytes: 334_643_268,
+        type: 'VAE',
+        format: 'SafeTensor',
+        fp: 'fp16',
+        size_variant: null,
+        sha256: `${model.id}${v.n}3`.padEnd(64, '0'),
+        primary: false,
+        target_resource_type: 'vaes',
+        compatible: true,
+        reason: null,
+        warnings,
+      })
+    }
+    return {
+      id: versionId(v.n),
+      name: v.name,
+      base_model: v.base,
+      base_model_type: 'Standard',
+      model_type: v.family,
+      trained_words: words,
+      published_at: new Date(Date.UTC(2026, 5, 10 - v.n)).toISOString(),
+      early_access: false,
+      preview: model.preview,
+      files: files.map((file) => {
+        const local = models[browsing]?.[file.target_resource_type]?.includes(file.name)
+        return {
+          ...file,
+          local_path: local ? `models/${file.target_resource_type}/${browsing}/civitai/${file.name}` : null,
+          local_match: local ? 'sha256' : null,
+        }
+      }),
+    }
+  })
+}
+
+function findFile(versionId) {
+  const modelId = Math.floor(versionId / 10)
+  const found = findCatalogueModel(modelId)
+  if (!found) return undefined
+  return { ...found, versions: versionsFor(found.model, found.family, found.resource, found.family) }
+}
+
+const query = (req) => new URL(req.url, 'http://x').searchParams
+
+route('GET', '/api/v1/civitai/search', (req, res) => {
+  const q = query(req)
+  const family = q.get('model_type')
+  const resource = q.get('resource_type')
+  if (!FAMILIES.includes(family) || !CIVITAI_TYPES[resource])
+    return send(res, 400, { detail: 'Invalid model_type or resource_type' })
+  const sort = q.get('sort') ?? SORTS[0]
+  if (!SORTS.includes(sort)) return send(res, 400, { detail: `Invalid sort. Must be one of ${JSON.stringify(SORTS)}` })
+  if (!PERIODS.includes(q.get('period') ?? PERIODS[0]))
+    return send(res, 400, { detail: `Invalid period. Must be one of ${JSON.stringify(PERIODS)}` })
+  const text = (q.get('query') ?? '').trim().toLowerCase()
+  const nsfw = q.get('nsfw') === 'true'
+  const limit = Number(q.get('limit') ?? 24)
+  const offset = Number(q.get('cursor') ?? 0)
+  const items = catalogue(family, resource)
+    .filter((m) => (nsfw || !m.nsfw) && (!text || m.name.toLowerCase().includes(text)))
+    .sort((a, b) =>
+      sort === 'Newest'
+        ? b.published_at.localeCompare(a.published_at)
+        : sort === 'Most Downloaded'
+          ? b.stats.downloads - a.stats.downloads
+          : b.stats.rating - a.stats.rating,
+    )
+  const page = items.slice(offset, offset + limit)
+  send(res, 200, {
+    // eslint-disable-next-line no-unused-vars -- strip internal fields
+    items: page.map(({ published_at, ...m }) => m),
+    next_cursor: offset + limit < items.length ? String(offset + limit) : null,
+  })
+})
+
+route('GET', '/api/v1/civitai/models/:id', (req, res, { id }) => {
+  const browsing = query(req).get('model_type')
+  if (!FAMILIES.includes(browsing)) return send(res, 400, { detail: 'Invalid model_type' })
+  const found = findCatalogueModel(Number(id))
+  if (!found) return send(res, 404, { detail: 'Model not found on Civitai' })
+  // eslint-disable-next-line no-unused-vars -- strip internal fields
+  const { published_at, ...model } = found.model
+  send(res, 200, {
+    ...model,
+    description: `<p>A <b>${model.name}</b> model for testing.</p><p>Works best at 30 steps.<br>Have fun!</p>`,
+    versions: versionsFor(found.model, found.family, found.resource, browsing),
+  })
+})
+
+const downloadWorkers = 2
+let downloadsRunning = 0
+
+function pumpDownloads() {
+  while (downloadsRunning < downloadWorkers) {
+    const next = [...jobs.values()].find((j) => j.status === 'queued' && j.lane === 'io')
+    if (!next) return
+    downloadsRunning++
+    next.status = 'running'
+    next.started_at = new Date().toISOString()
+    const started = Date.now()
+    const total = next.download.size_bytes
+    const timer = setInterval(() => {
+      if (next.status === 'cancelled') {
+        // Cancellable: the transfer stops right away.
+        clearInterval(timer)
+        next.completed_at = new Date().toISOString()
+        next.error = 'Cancelled'
+        downloadsRunning--
+        return pumpDownloads()
+      }
+      const progress = Math.min(1, (Date.now() - started) / next.durationMs)
+      const done = Math.round(total * progress)
+      const elapsed = Math.max((Date.now() - started) / 1000, 0.001)
+      next.progress = progress
+      next.detail = {
+        phase: progress < 1 ? 'downloading' : 'verifying',
+        filename: next.download.filename,
+        bytes_done: done,
+        bytes_total: total,
+        speed_bps: Math.round(done / elapsed),
+        eta_s: progress < 1 ? Math.round((next.durationMs - (Date.now() - started)) / 1000) : null,
+      }
+      if (progress < 1) return
+      clearInterval(timer)
+      try {
+        next.result = next.run()
+        next.status = 'completed'
+      } catch (e) {
+        next.status = 'failed'
+        next.error = e.message
+      }
+      next.completed_at = new Date().toISOString()
+      downloadsRunning--
+      pumpDownloads()
+    }, 100)
+  }
+}
+
+route('POST', '/api/v1/civitai/downloads', (req, res) => {
+  const { version_id, file_id, model_type, resource_type, accept_mismatch } = req.body
+  const found = findFile(version_id)
+  const version = found?.versions.find((v) => v.id === version_id)
+  const file = version?.files.find((f) => f.id === file_id)
+  if (!file) return send(res, 404, { detail: `File ${file_id} is not part of Civitai version ${version_id}` })
+  if (!file.compatible) return send(res, 400, { detail: file.reason })
+  if (file.target_resource_type !== resource_type)
+    return send(res, 400, { detail: `This file belongs in ${file.target_resource_type}, not ${resource_type}` })
+  if (version.model_type !== model_type && !accept_mismatch)
+    return send(res, 409, {
+      detail: {
+        message: "Base model doesn't match; resend with accept_mismatch to download anyway",
+        warnings: [`Made for ${version.base_model} (${version.model_type}), not ${model_type}`],
+      },
+    })
+  const active = [...jobs.values()].find(
+    (j) => j.lane === 'io' && (j.status === 'queued' || j.status === 'running') && j.download.file_id === file_id,
+  )
+  if (active)
+    return send(res, 409, { detail: { message: 'This file is already being downloaded', job_id: active.job_id } })
+  if (models[model_type][resource_type].includes(file.name))
+    return send(res, 409, {
+      detail: { message: 'Already downloaded', path: `models/${resource_type}/${model_type}/civitai/${file.name}` },
+    })
+
+  const path = `models/${resource_type}/${model_type}/civitai/${file.name}`
+  const job = submit('civitai_download', 2500, () => {
+    if (file.name.includes('broken')) throw new Error('Hash mismatch: download discarded (mock failure)')
+    models[model_type][resource_type].push(file.name)
+    civitai[file.name] = {
+      model_id: found.model.id,
+      version_id,
+      model_name: found.model.name,
+      version_name: version.name,
+      base_model: version.base_model,
+      trained_words: version.trained_words,
+      nsfw: found.model.nsfw,
+      url: `https://civitai.com/models/${found.model.id}?modelVersionId=${version_id}`,
+    }
+    return { path, filename: file.name, model_type, resource_type, sha256: file.sha256, size_bytes: file.size_bytes }
+  })
+  Object.assign(job, {
+    lane: 'io',
+    cancellable: true,
+    // Transfer time follows file size (~2 s per GB) regardless of MOCK_SPEED, so progress stays visible.
+    durationMs: Math.max(300, (file.size_bytes / 2 ** 30) * 2000),
+    download: { file_id, filename: file.name, size_bytes: file.size_bytes },
+  })
+  queueMicrotask(pumpDownloads)
+  send(res, 202, {
+    job_id: job.job_id,
+    filename: file.name,
+    path,
+    warnings: version.model_type !== model_type ? [`Made for ${version.base_model}`] : [],
+  })
+})
+
+route('GET', '/api/v1/civitai/files/layout', (req, res) => {
+  const q = query(req)
+  const versionId = Number(q.get('version_id'))
+  const found = findFile(versionId)
+  const version = found?.versions.find((v) => v.id === versionId)
+  const file = version?.files.find((f) => f.id === Number(q.get('file_id')))
+  if (!file) return send(res, 404, { detail: 'File not found' })
+  if (version.model_type !== 'flux')
+    return send(res, 400, { detail: 'Layout checks are only available for Flux models' })
+  if (file.name.includes('locked')) return send(res, 401, { detail: 'Civitai needs an API key for this file' })
+  const bundled = version.name.startsWith('v2')
+  send(res, 200, {
+    layout: { transformer: true, clip_l: bundled, t5xxl: bundled, vae: bundled, format: 'comfy', variant: 'dev' },
+    missing_components: bundled ? [] : ['t5xxl'],
+  })
+})
+
+route('POST', '/api/v1/civitai/identify', (req, res) => {
+  const { model_type, resource_type, model_name } = req.body
+  if (!models[model_type]?.[resource_type]?.includes(model_name)) return send(res, 404, { detail: 'Model not found' })
+  // Pretend hashing takes a moment; only "deliberate" checkpoints are on Civitai.
+  setTimeout(() => {
+    if (!model_name.includes('deliberate')) return send(res, 200, { matched: false })
+    civitai[model_name] = {
+      model_id: 4823,
+      version_id: 156110,
+      model_name: 'Deliberate',
+      version_name: 'v3',
+      base_model: 'SD 1.5',
+      trained_words: [],
+      nsfw: false,
+      url: 'https://civitai.com/models/4823?modelVersionId=156110',
+    }
+    send(res, 200, { matched: true, sidecar: { source: 'civitai', ...civitai[model_name] } })
+  }, 600 / SPEED)
+})
+
+route('GET', '/api/v1/__mock/civitai-image/:size/:id', (_req, res, { id }) => {
+  res.writeHead(200, { 'content-type': 'image/png' })
+  res.end(Buffer.from(renderImage(150, 200, Number.parseInt(id, 10), `civitai ${id}`), 'base64'))
+})
+
 // Test-only: restore the initial state so each end-to-end test is independent.
 let seedCount = 30
 route('POST', '/__mock/reset', (_req, res) => {
-  for (const job of jobs.values()) if (job.status === 'queued') job.status = 'cancelled'
+  // Running downloads are cancellable: cancelling stops them before they add models.
+  for (const job of jobs.values())
+    if (job.status === 'queued' || (job.status === 'running' && job.lane === 'io')) job.status = 'cancelled'
   jobs.clear()
   outputs.length = 0
   seedOutputs(seedCount)
   for (const family of FAMILIES) models[family] = structuredClone(initialModels[family])
+  for (const name of Object.keys(civitai)) if (!(name in initialCivitai)) delete civitai[name]
   send(res, 200, { ok: true })
 })
 

@@ -7,7 +7,17 @@
  * the backend declares a response model and `npm run api:sync` picks it up.
  */
 /** Declared by the backend; re-exported so callers import API types from one place. */
-export type { FluxLayout, ModelCivitaiInfo, ModelEntry } from './schema'
+export type {
+  CivitaiFile,
+  CivitaiModelDetail,
+  CivitaiModelSummary,
+  CivitaiPreview,
+  CivitaiStatusResponse,
+  CivitaiVersion,
+  FluxLayout,
+  ModelCivitaiInfo,
+  ModelEntry,
+} from './schema'
 
 export type JobState = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
 
@@ -64,6 +74,19 @@ export interface BatchMergeResult {
   alpha: number
   model_type: string
   count: number
+}
+
+/** `result` of a completed Civitai download job. */
+export interface DownloadResult {
+  path: string
+  filename: string
+  model_type: string
+  resource_type: string
+  sha256: string
+  size_bytes: number
+  civitai_model_id?: number | null
+  civitai_version_id?: number | null
+  flux_layout?: Record<string, unknown>
 }
 
 /** Response of POST /api/v1/{family}/generate/batch. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { DEFAULT_FAMILY, FAMILIES, FAMILY_LIST, isFamilyId } from './families'
+import { DEFAULT_FAMILY, FAMILIES, FAMILY_LIST, isFamilyId, isResourceType } from './families'
 
 describe('family registry', () => {
   it('keys entries by their own id', () => {
@@ -21,5 +21,13 @@ describe('family registry', () => {
     expect(isFamilyId('flux')).toBe(true)
     expect(isFamilyId('sd3')).toBe(false)
     expect(isFamilyId(undefined)).toBe(false)
+  })
+})
+
+describe('isResourceType', () => {
+  it('accepts the backend resource directories only', () => {
+    expect(isResourceType('loras')).toBe(true)
+    expect(isResourceType('embeddings')).toBe(false)
+    expect(isResourceType(null)).toBe(false)
   })
 })

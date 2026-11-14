@@ -78,7 +78,7 @@ function ModelDetails({ family, resource, name }: { family: FamilyId; resource: 
                 href={info.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-primary underline-offset-4 hover:underline"
+                className="inline-flex items-center gap-1 text-xs font-medium underline underline-offset-4 hover:text-muted-foreground"
               >
                 View on Civitai
                 <ExternalLink className="size-3" aria-hidden />

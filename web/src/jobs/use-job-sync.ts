@@ -40,6 +40,7 @@ function describeGroup(jobs: TrackedJob[]): string {
   const { kind, label } = jobs[0]
   if (kind === 'merge' || kind === 'recipe-merge') return `Merge finished: ${label}`
   if (kind === 'batch-merge') return 'Batch merge finished'
+  if (kind === 'download') return `Downloaded ${label}`
   if (kind === 'inpaint') return 'Inpainting ready'
   const done = jobs.filter((j) => j.status === 'completed').length
   return done === 1 ? 'Image ready' : `${done} images ready`
@@ -115,8 +116,12 @@ export function useJobSync() {
     if (!finished.length) return
 
     // Refresh data the finished jobs changed.
-    if (finished.some((j) => j.kind.endsWith('merge') && j.status === 'completed')) {
+    if (finished.some((j) => (j.kind.endsWith('merge') || j.kind === 'download') && j.status === 'completed')) {
       queryClient.invalidateQueries({ queryKey: ['models'] })
+    }
+    if (finished.some((j) => j.kind === 'download')) {
+      // Civitai file lists say which files are already local.
+      queryClient.invalidateQueries({ queryKey: ['civitai-model'] })
     }
     if (
       finished.some(
@@ -141,8 +146,9 @@ export function useJobSync() {
       if (!group.some((j) => j.status === 'completed')) continue
       const title = describeGroup(group)
       const path = toolPath(JOB_TOOL[group[0].kind], group[0].family)
-      // Merge titles already name the output; generation titles don't name the prompt.
-      const description = group[0].kind.endsWith('merge') ? undefined : group[0].label
+      // Merge and download titles already name the file; generation titles don't name the prompt.
+      const namesFile = group[0].kind.endsWith('merge') || group[0].kind === 'download'
+      const description = namesFile ? undefined : group[0].label
       toast.success(title, {
         description,
         action: { label: 'View', onClick: () => navigate(path) },

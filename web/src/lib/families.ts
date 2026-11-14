@@ -116,3 +116,13 @@ export function isFamilyId(value: string | undefined): value is FamilyId {
 
 /** Resource directories exposed by GET /models/{family}/{resource}. */
 export type ResourceType = 'checkpoints' | 'loras' | 'vaes'
+
+export const RESOURCE_LABELS: Record<ResourceType, string> = {
+  checkpoints: 'Checkpoints',
+  loras: 'LoRAs',
+  vaes: 'VAEs',
+}
+
+export function isResourceType(value: string | null | undefined): value is ResourceType {
+  return !!value && value in RESOURCE_LABELS
+}

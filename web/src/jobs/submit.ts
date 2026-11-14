@@ -2,7 +2,7 @@ import { api, unwrap } from '@/api/client'
 import { queryClient } from '@/api/query-client'
 import { queryKeys } from '@/api/queries'
 import type { BatchGenerateResponse, CompareResponse } from '@/api/types'
-import type { FamilyId } from '@/lib/families'
+import type { FamilyId, ResourceType } from '@/lib/families'
 import { seedsFor, toApiParams, type GenerationParams } from '@/lib/generation'
 
 import { jobStore, type JobKind, type TrackedJob } from './job-store'
@@ -200,6 +200,57 @@ export async function submitRecipeMerge(
   const { job_id } = await unwrap(api.POST('/api/v1/merge/recipe', { body: request }))
   track([{ id: job_id, kind: 'recipe-merge', family, groupId: newGroupId(), label: outputName, model: base, request }])
   return job_id
+}
+
+export interface DownloadRequest {
+  family: FamilyId
+  resource: ResourceType
+  versionId: number
+  fileId: number
+  /** Civitai model name, shown alongside the file name. */
+  modelName: string
+  acceptMismatch?: boolean
+}
+
+/**
+ * Start downloading a Civitai file into the family's model directories.
+ * Rejects with the API's 409 when the base model doesn't match (resend with
+ * `acceptMismatch`), the file is already local, or it's already downloading.
+ */
+export async function submitDownload(download: DownloadRequest) {
+  const request = {
+    version_id: download.versionId,
+    file_id: download.fileId,
+    model_type: download.family,
+    resource_type: download.resource,
+    accept_mismatch: download.acceptMismatch ?? false,
+  }
+  const started = await unwrap(api.POST('/api/v1/civitai/downloads', { body: request }))
+  trackDownload(started.job_id, started.filename, download)
+  return started
+}
+
+/** Track a download job, e.g. one already running that this browser didn't start. */
+export function trackDownload(jobId: string, filename: string, download: DownloadRequest) {
+  if (jobStore.getAll().some((j) => j.id === jobId)) return
+  track([
+    {
+      id: jobId,
+      kind: 'download',
+      family: download.family,
+      groupId: newGroupId(),
+      label: filename,
+      model: download.modelName,
+      request: {
+        version_id: download.versionId,
+        file_id: download.fileId,
+        model_type: download.family,
+        resource_type: download.resource,
+      },
+      lane: 'io',
+      cancellable: true,
+    },
+  ])
 }
 
 /**

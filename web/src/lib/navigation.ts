@@ -1,9 +1,9 @@
-import { Activity, Brush, GitMerge, Images, Sparkles, type LucideIcon } from 'lucide-react'
+import { Activity, Brush, GitMerge, Images, Library, Sparkles, type LucideIcon } from 'lucide-react'
 
 import type { FamilyId } from './families'
 
 /** Tools that operate on one model family; their routes are `/<id>/:family`. */
-export type ToolId = 'generate' | 'inpaint' | 'merge'
+export type ToolId = 'generate' | 'inpaint' | 'merge' | 'models'
 
 export interface ToolNavItem {
   id: ToolId
@@ -23,6 +23,7 @@ export const TOOLS: ToolNavItem[] = [
   { id: 'generate', label: 'Generate', description: 'Text to image', icon: Sparkles },
   { id: 'inpaint', label: 'Inpaint', description: 'Repaint masked regions', icon: Brush },
   { id: 'merge', label: 'Merge', description: 'Blend checkpoints', icon: GitMerge },
+  { id: 'models', label: 'Models', description: 'Local models and Civitai downloads', icon: Library },
 ]
 
 export const PAGES: PageNavItem[] = [
