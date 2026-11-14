@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 
-import type { JobState } from '@/api/types'
+import type { JobDetail, JobLane, JobState } from '@/api/types'
 import type { FamilyId } from '@/lib/families'
 import type { ToolId } from '@/lib/navigation'
 
@@ -38,8 +38,14 @@ export interface TrackedJob {
   startedAt?: string | null
   completedAt?: string | null
   error?: string | null
-  /** 1-based position among queued jobs; undefined once running. */
+  /** 1-based position among queued jobs of the same lane; undefined once running. */
   queuePosition?: number
+  lane?: JobLane
+  /** Whether cancelling stops the job while it runs, rather than only discarding its result. */
+  cancellable?: boolean
+  /** 0-1, when the backend reports it (0 otherwise until the job completes). */
+  progress?: number
+  detail?: JobDetail | null
 }
 
 export const JOB_TOOL: Record<JobKind, ToolId> = {
@@ -56,6 +62,11 @@ const MAX_TRACKED = 200
 
 export function isActive(job: Pick<TrackedJob, 'status'>): boolean {
   return job.status === 'queued' || job.status === 'running'
+}
+
+/** Progress (0-1) when the backend reports it for a running job, else undefined. */
+export function reportedProgress(job: Pick<TrackedJob, 'status' | 'progress'>): number | undefined {
+  return job.status === 'running' && job.progress && job.progress > 0 && job.progress < 1 ? job.progress : undefined
 }
 
 function load(): TrackedJob[] {

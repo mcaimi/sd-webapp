@@ -25,7 +25,10 @@ export class ApiError extends Error {
   }
 }
 
-/** FastAPI errors carry `detail` as a string or a list of validation errors. */
+/**
+ * FastAPI errors carry `detail` as a string, a list of validation errors, or
+ * (for some endpoints) an object with a `message`.
+ */
 function formatDetail(status: number, detail: unknown): string {
   if (typeof detail === 'string') return detail
   if (Array.isArray(detail)) {
@@ -33,6 +36,8 @@ function formatDetail(status: number, detail: unknown): string {
       .map((d: { loc?: unknown[]; msg?: string }) => [d.loc?.slice(1).join('.'), d.msg].filter(Boolean).join(': '))
       .join('; ')
   }
+  const message = (detail as { message?: unknown } | null)?.message
+  if (typeof message === 'string') return message
   return `Request failed with status ${status}`
 }
 

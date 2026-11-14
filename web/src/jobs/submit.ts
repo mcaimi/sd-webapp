@@ -203,9 +203,9 @@ export async function submitRecipeMerge(
 }
 
 /**
- * Cancel a queued job. The backend can't stop a running job: it would mark it
- * cancelled, keep computing, then report it completed. So only offer this for
- * queued jobs.
+ * Cancel a job. Queued jobs never run. Running jobs are interrupted only when
+ * `cancellable` (downloads); other running jobs (generation, merges) keep
+ * going on the backend until they finish, and their result is discarded.
  */
 export async function cancelJob(jobId: string) {
   await unwrap(api.DELETE('/api/v1/jobs/{job_id}', { params: { path: { job_id: jobId } } }))

@@ -10,6 +10,8 @@ export function HealthIndicator() {
   const health = useHealth()
   const systemInfo = useSystemInfo()
   const queue = systemInfo.data?.queue_stats as unknown as QueueStats | undefined
+  // Generation and merges only; downloads queue separately on the I/O lane.
+  const queued = queue?.lanes?.gpu?.queue_size ?? queue?.queue_size
 
   const state = health.isPending ? 'checking' : health.isError ? 'offline' : 'online'
   const label = {
@@ -41,9 +43,7 @@ export function HealthIndicator() {
             {detail && <span className="ml-auto text-xs text-muted-foreground">{detail}</span>}
           </NavLink>
         </SidebarMenuButton>
-        {!!queue?.queue_size && (
-          <SidebarMenuBadge title={`${queue.queue_size} queued jobs`}>{queue.queue_size}</SidebarMenuBadge>
-        )}
+        {!!queued && <SidebarMenuBadge title={`${queued} queued jobs`}>{queued}</SidebarMenuBadge>}
       </SidebarMenuItem>
     </SidebarMenu>
   )

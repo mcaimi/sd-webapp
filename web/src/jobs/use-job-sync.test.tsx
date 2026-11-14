@@ -15,6 +15,10 @@ type RemoteJob = {
   created_at: string
   started_at?: string | null
   error?: string | null
+  lane?: string
+  cancellable?: boolean
+  progress?: number
+  detail?: Record<string, unknown> | null
 }
 let remote: RemoteJob[] = []
 
@@ -75,6 +79,32 @@ describe('useJobSync', () => {
     const store = await setup([tracked('a'), tracked('b')])
     await waitFor(() => expect(store.getAll().find((j) => j.id === 'b')?.queuePosition).toBe(1))
     expect(store.getAll().find((j) => j.id === 'a')?.status).toBe('running')
+  })
+
+  it("counts queue positions within the job's lane and tracks progress", async () => {
+    remote = [
+      { job_id: 'dl-running', status: 'running', created_at: '2026-01-01T00:00:00', lane: 'io', cancellable: true },
+      { job_id: 'dl-queued', status: 'queued', created_at: '2026-01-01T00:00:01', lane: 'io', cancellable: true },
+      { job_id: 'gen', status: 'queued', created_at: '2026-01-01T00:00:02', lane: 'gpu' },
+      {
+        job_id: 'mine',
+        status: 'running',
+        created_at: '2026-01-01T00:00:03',
+        lane: 'io',
+        cancellable: true,
+        progress: 0.25,
+        detail: { phase: 'downloading', bytes_done: 25, bytes_total: 100 },
+      },
+    ]
+    const store = await setup([tracked('gen'), tracked('mine', { groupId: 'group-2' })])
+    await waitFor(() => expect(store.getAll().find((j) => j.id === 'gen')?.queuePosition).toBe(1))
+    expect(store.getAll().find((j) => j.id === 'mine')).toMatchObject({
+      status: 'running',
+      lane: 'io',
+      cancellable: true,
+      progress: 0.25,
+      detail: { phase: 'downloading', bytes_done: 25, bytes_total: 100 },
+    })
   })
 
   it('announces a submission once, when all of its jobs are done', async () => {

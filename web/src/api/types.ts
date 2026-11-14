@@ -1,16 +1,27 @@
 /**
  * Hand-written shapes for API payloads the OpenAPI spec leaves untyped
- * (`result: object`, batch/compare responses, model list items).
+ * (`result: object`, `detail: object`, batch/compare responses, system stats).
  *
  * They mirror sd-api-backend's actual responses (api/routers/*.py,
  * api/services/generation.py, api/services/merge.py). Delete each one once
  * the backend declares a response model and `npm run api:sync` picks it up.
  */
+/** Declared by the backend; re-exported so callers import API types from one place. */
+export type { FluxLayout, ModelCivitaiInfo, ModelEntry } from './schema'
+
 export type JobState = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
 
-export interface ModelEntry {
-  name: string
-  path: string
+/** Worker pool a job runs on: `gpu` for generation and merges, `io` for downloads. */
+export type JobLane = 'gpu' | 'io'
+
+/** `JobStatusResponse.detail`: free-form progress info, published by downloads. */
+export interface JobDetail {
+  phase?: string
+  filename?: string
+  bytes_done?: number
+  bytes_total?: number
+  speed_bps?: number
+  eta_s?: number | null
 }
 
 /** One entry of `GenerationMetadata.instances`, as produced by metastable. */
@@ -89,17 +100,27 @@ export interface HostStats {
   load_average?: number[]
 }
 
-/** `SystemInfo.queue_stats`. */
+/** One entry of `SystemInfo.queue_stats.lanes`. */
+export interface LaneStats {
+  queue_size: number
+  num_workers: number
+  running_jobs: number
+}
+
+/** `SystemInfo.queue_stats`. `queue_size` sums every lane; `num_workers` counts GPU workers. */
 export interface QueueStats {
   queue_size: number
   total_jobs: number
   num_workers: number
   workers_running: boolean
+  lanes?: Partial<Record<JobLane, LaneStats>>
 }
 
 /** `SystemInfo.cache_stats`. */
 export interface CacheStats {
   cached_models: number
   max_models: number
+  /** Cached pipelines currently leased by running jobs. */
+  in_use?: number
   cache_keys: string[]
 }

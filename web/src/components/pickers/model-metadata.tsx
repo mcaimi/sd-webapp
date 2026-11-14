@@ -1,16 +1,22 @@
-import { Info } from 'lucide-react'
+import { ExternalLink, Info } from 'lucide-react'
 import { useState } from 'react'
 
-import { useModelMetadata } from '@/api/queries'
+import { useModelMetadata, useModels } from '@/api/queries'
+import type { FluxLayout } from '@/api/types'
 import { QueryError } from '@/components/query-error'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { FamilyId, ResourceType } from '@/lib/families'
+import { civitaiLabel, fluxComponents } from '@/lib/models'
+
+import { ModelThumb } from './model-thumb'
+import { NsfwBadge } from './nsfw-badge'
 
 const PREVIEW_KEYS = 10
 
-/** Info button showing a model's safetensors header metadata. Fetched on first open. */
+/** Info button showing a model's Civitai details and safetensors header metadata. Fetched on first open. */
 export function ModelMetadataButton({
   family,
   resource,
@@ -28,10 +34,75 @@ export function ModelMetadataButton({
           <Info />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80" align="end">
-        {open && <MetadataContent family={family} resource={resource} name={name} />}
+      <PopoverContent className="w-80 space-y-3" align="end">
+        {open && (
+          <>
+            <ModelDetails family={family} resource={resource} name={name} />
+            <MetadataContent family={family} resource={resource} name={name} />
+          </>
+        )}
       </PopoverContent>
     </Popover>
+  )
+}
+
+/** What the models list knows beyond the file: Civitai match, preview, Flux layout. */
+function ModelDetails({ family, resource, name }: { family: FamilyId; resource: ResourceType; name: string }) {
+  const { data } = useModels(family, resource)
+  const model = data?.find((m) => m.name === name)
+  if (!model) return null
+  const info = model.civitai
+  const label = civitaiLabel(model)
+  const layout = model.flux_layout ? fluxComponents(model.flux_layout as Partial<FluxLayout>) : undefined
+  if (!label && !model.has_preview && !layout) return null
+
+  return (
+    <div className="space-y-3 border-b pb-3">
+      <div className="flex gap-3">
+        {model.has_preview && (
+          <ModelThumb family={family} resource={resource} model={model} className="size-16 rounded-md" />
+        )}
+        {label && (
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="text-sm font-medium">{label}</p>
+            <div className="flex flex-wrap items-center gap-1">
+              {info?.base_model && (
+                <Badge variant="outline" className="h-4 px-1.5 text-[10px]">
+                  {info.base_model}
+                </Badge>
+              )}
+              {info?.nsfw && <NsfwBadge />}
+            </div>
+            {info?.url && (
+              <a
+                href={info.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary underline-offset-4 hover:underline"
+              >
+                View on Civitai
+                <ExternalLink className="size-3" aria-hidden />
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+      {!!info?.trained_words.length && (
+        <div className="text-xs">
+          <p className="text-muted-foreground">Trigger words</p>
+          <p className="break-words">{info.trained_words.join(', ')}</p>
+        </div>
+      )}
+      {layout && (
+        <div className="text-xs">
+          <p className="text-muted-foreground">Bundled components</p>
+          <p>{layout.bundled.join(', ') || 'None'}</p>
+          {layout.shared.length > 0 && (
+            <p className="text-muted-foreground">{layout.shared.join(', ')} from the shared Flux components</p>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 

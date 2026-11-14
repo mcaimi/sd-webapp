@@ -87,3 +87,33 @@ test('queued jobs can be cancelled from the jobs panel', async ({ page }) => {
   await row.getByRole('button', { name: 'Cancel job' }).click()
   await expect(row.getByText('Cancelled')).toBeVisible()
 })
+
+test('discarding a running job asks first and explains the backend keeps running it', async ({ page }) => {
+  await page.goto('/generate/sd15')
+  const prompt = page.getByLabel('Prompt', { exact: true })
+  await prompt.fill('slow job to discard')
+  await prompt.press('ControlOrMeta+Enter')
+
+  const results = page.getByRole('region', { name: 'Results' })
+  await expect(results.getByText(/^Running/)).toBeVisible({ timeout: 15_000 })
+  await results.getByRole('button', { name: 'Discard' }).click()
+
+  const confirm = page.getByRole('alertdialog', { name: "Discard this job's result?" })
+  await expect(confirm).toContainText('keeps running to completion')
+  await confirm.getByRole('button', { name: 'Discard result' }).click()
+  await expect(results.getByText('Cancelled')).toBeVisible()
+  await waitForJobsToSettle(page)
+})
+
+test('adds a LoRA and inserts its Civitai trigger words into the prompt', async ({ page }) => {
+  await page.goto('/generate/sd15')
+  const prompt = page.getByLabel('Prompt', { exact: true })
+  await prompt.fill('a harbour')
+
+  await page.getByRole('button', { name: 'Add' }).click()
+  await page.getByRole('option', { name: /Watercolor Style/ }).click()
+  await page.getByRole('button', { name: 'wcstyle' }).click()
+  await expect(prompt).toHaveValue('a harbour, wcstyle')
+  await page.getByRole('button', { name: 'All' }).click()
+  await expect(prompt).toHaveValue('a harbour, wcstyle, watercolor painting')
+})

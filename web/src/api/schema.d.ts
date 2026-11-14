@@ -336,13 +336,34 @@ export interface paths {
          * @description List available models.
          *
          *     Args:
-         *         model_type: "sd15" or "sdxl"
+         *         model_type: "sd15", "sdxl", "illustrious", or "flux"
          *         resource_type: "checkpoints", "loras", or "vaes"
          *
          *     Returns:
-         *         List of models with names and paths
+         *         List of models with names, paths and, when known, Civitai details,
+         *         preview availability and (Flux checkpoints) bundled components
          */
         get: operations["list_models_api_v1_models__model_type___resource_type__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/models/{model_type}/{resource_type}/{model_name}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Model Preview
+         * @description Preview image saved next to a model downloaded from (or identified on) Civitai.
+         */
+        get: operations["get_model_preview_api_v1_models__model_type___resource_type___model_name__preview_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -363,7 +384,7 @@ export interface paths {
          * @description Get metadata for a specific model.
          *
          *     Args:
-         *         model_type: "sd15" or "sdxl"
+         *         model_type: "sd15", "sdxl", "illustrious", or "flux"
          *         resource_type: "checkpoints", "loras", or "vaes"
          *         model_name: Model filename
          *
@@ -708,6 +729,140 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/civitai/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Civitai Status
+         * @description Feature status and the type mappings used for Civitai filters.
+         */
+        get: operations["civitai_status_api_v1_civitai_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/civitai/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search Models
+         * @description Search Civitai for models usable as model_type/resource_type.
+         *
+         *     Paginate by passing the returned next_cursor back as cursor.
+         */
+        get: operations["search_models_api_v1_civitai_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/civitai/models/{model_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Model
+         * @description A Civitai model with its versions and files. Each file says whether it
+         *     can be downloaded for model_type (and why not), where it would go, and
+         *     whether it's already present locally.
+         */
+        get: operations["get_model_api_v1_civitai_models__model_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/civitai/downloads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Download File
+         * @description Download a Civitai file into the model directories as a background job.
+         *
+         *     Track it (progress, cancel) through /jobs/{job_id}. A base model that
+         *     doesn't match model_type answers 409 with warnings; resend with
+         *     accept_mismatch=true to download anyway.
+         */
+        post: operations["download_file_api_v1_civitai_downloads_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/civitai/files/layout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * File Layout
+         * @description Which components a Flux checkpoint on Civitai bundles (transformer,
+         *     CLIP-L, T5-XXL, VAE), read from its safetensors header without
+         *     downloading it, and which shared components it would need from
+         *     flux.components_path that are missing there. Most Flux checkpoints need
+         *     an API key even for this.
+         */
+        get: operations["file_layout_api_v1_civitai_files_layout_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/civitai/identify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Identify Model
+         * @description Look up a local model on Civitai by its SHA256 and, on a match, write
+         *     its .civitai.json sidecar (and preview). Hashing a large checkpoint
+         *     takes a while; the hash is kept in the sidecar so it's computed once.
+         */
+        post: operations["identify_model_api_v1_civitai_identify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -761,6 +916,291 @@ export interface components {
              * @default true
              */
             preserve_metadata: boolean;
+        };
+        /** CivitaiDownloadRequest */
+        CivitaiDownloadRequest: {
+            /** Version Id */
+            version_id: number;
+            /** File Id */
+            file_id: number;
+            /** Model Type */
+            model_type: string;
+            /** Resource Type */
+            resource_type: string;
+            /**
+             * Accept Mismatch
+             * @description Download even if the base model doesn't match model_type
+             * @default false
+             */
+            accept_mismatch: boolean;
+        };
+        /** CivitaiDownloadResponse */
+        CivitaiDownloadResponse: {
+            /** Job Id */
+            job_id: string;
+            /** Filename */
+            filename: string;
+            /** Path */
+            path: string;
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: string[];
+        };
+        /** CivitaiFile */
+        CivitaiFile: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Type */
+            type?: string | null;
+            /** Format */
+            format?: string | null;
+            /** Fp */
+            fp?: string | null;
+            /** Size Variant */
+            size_variant?: string | null;
+            /** Sha256 */
+            sha256?: string | null;
+            /**
+             * Primary
+             * @default false
+             */
+            primary: boolean;
+            /**
+             * Target Resource Type
+             * @description Resource directory the file would be saved to
+             */
+            target_resource_type?: string | null;
+            /** Compatible */
+            compatible: boolean;
+            /**
+             * Reason
+             * @description Why the file can't be downloaded
+             */
+            reason?: string | null;
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: string[];
+            /**
+             * Local Path
+             * @description Already present locally at this path
+             */
+            local_path?: string | null;
+            /**
+             * Local Match
+             * @description 'sha256' or 'name'
+             */
+            local_match?: string | null;
+        };
+        /** CivitaiIdentifyRequest */
+        CivitaiIdentifyRequest: {
+            /** Model Type */
+            model_type: string;
+            /** Resource Type */
+            resource_type: string;
+            /** Model Name */
+            model_name: string;
+        };
+        /** CivitaiIdentifyResponse */
+        CivitaiIdentifyResponse: {
+            /** Matched */
+            matched: boolean;
+            /** Sidecar */
+            sidecar?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** CivitaiLayoutResponse */
+        CivitaiLayoutResponse: {
+            layout: components["schemas"]["FluxLayout"];
+            /**
+             * Missing Components
+             * @description Shared Flux components this file needs but flux.components_path lacks
+             * @default []
+             */
+            missing_components: string[];
+        };
+        /** CivitaiModelDetail */
+        CivitaiModelDetail: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Type */
+            type?: string | null;
+            /** Creator */
+            creator?: string | null;
+            /**
+             * Nsfw
+             * @default false
+             */
+            nsfw: boolean;
+            /**
+             * Tags
+             * @default []
+             */
+            tags: string[];
+            stats: components["schemas"]["CivitaiStats"];
+            preview?: components["schemas"]["CivitaiPreview"] | null;
+            /**
+             * Base Models
+             * @default []
+             */
+            base_models: string[];
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /**
+             * Versions
+             * @default []
+             */
+            versions: components["schemas"]["CivitaiVersion"][];
+        };
+        /** CivitaiModelSummary */
+        CivitaiModelSummary: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Type */
+            type?: string | null;
+            /** Creator */
+            creator?: string | null;
+            /**
+             * Nsfw
+             * @default false
+             */
+            nsfw: boolean;
+            /**
+             * Tags
+             * @default []
+             */
+            tags: string[];
+            stats: components["schemas"]["CivitaiStats"];
+            preview?: components["schemas"]["CivitaiPreview"] | null;
+            /**
+             * Base Models
+             * @default []
+             */
+            base_models: string[];
+        };
+        /** CivitaiPreview */
+        CivitaiPreview: {
+            /** Url */
+            url: string;
+            /** Type */
+            type: string;
+            /**
+             * Nsfw Level
+             * @default 0
+             */
+            nsfw_level: number;
+            /** Width */
+            width?: number | null;
+            /** Height */
+            height?: number | null;
+        };
+        /** CivitaiSearchResponse */
+        CivitaiSearchResponse: {
+            /** Items */
+            items: components["schemas"]["CivitaiModelSummary"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /** CivitaiStats */
+        CivitaiStats: {
+            /**
+             * Downloads
+             * @default 0
+             */
+            downloads: number;
+            /** Rating */
+            rating?: number | null;
+            /**
+             * Rating Count
+             * @default 0
+             */
+            rating_count: number;
+            /**
+             * Thumbs Up
+             * @default 0
+             */
+            thumbs_up: number;
+            /**
+             * Favorites
+             * @default 0
+             */
+            favorites: number;
+        };
+        /** CivitaiStatusResponse */
+        CivitaiStatusResponse: {
+            /** Enabled */
+            enabled: boolean;
+            /** Has Api Key */
+            has_api_key: boolean;
+            /** Nsfw Default */
+            nsfw_default: boolean;
+            /**
+             * Model Types
+             * @description App model type -> Civitai base models
+             */
+            model_types: {
+                [key: string]: string[];
+            };
+            /**
+             * Resource Types
+             * @description App resource type -> Civitai model types
+             */
+            resource_types: {
+                [key: string]: string[];
+            };
+            /** Sort Options */
+            sort_options: string[];
+            /** Period Options */
+            period_options: string[];
+        };
+        /** CivitaiVersion */
+        CivitaiVersion: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Base Model */
+            base_model?: string | null;
+            /** Base Model Type */
+            base_model_type?: string | null;
+            /**
+             * Model Type
+             * @description App model type of the base model
+             */
+            model_type?: string | null;
+            /**
+             * Trained Words
+             * @default []
+             */
+            trained_words: string[];
+            /** Published At */
+            published_at?: string | null;
+            /**
+             * Early Access
+             * @default false
+             */
+            early_access: boolean;
+            preview?: components["schemas"]["CivitaiPreview"] | null;
+            /**
+             * Files
+             * @default []
+             */
+            files: components["schemas"]["CivitaiFile"][];
         };
         /**
          * CompareModelsRequest
@@ -1008,6 +1448,21 @@ export interface components {
              */
             true_cfg_scale: number;
         };
+        /** FluxLayout */
+        FluxLayout: {
+            /** Transformer */
+            transformer: boolean;
+            /** Clip L */
+            clip_l: boolean;
+            /** T5Xxl */
+            t5xxl: boolean;
+            /** Vae */
+            vae: boolean;
+            /** Format */
+            format?: string | null;
+            /** Variant */
+            variant?: string | null;
+        };
         /**
          * GenerationRequest
          * @description Request for SD1.5/SDXL image generation.
@@ -1161,10 +1616,24 @@ export interface components {
             job_id: string;
             /** Job Type */
             job_type: string;
+            /**
+             * Lane
+             * @default gpu
+             */
+            lane: string;
+            /**
+             * Cancellable
+             * @default false
+             */
+            cancellable: boolean;
             /** Status */
             status: string;
             /** Progress */
             progress: number;
+            /** Detail */
+            detail?: {
+                [key: string]: unknown;
+            } | null;
             /** Created At */
             created_at: string;
             /** Started At */
@@ -1272,6 +1741,57 @@ export interface components {
             preserve_metadata: boolean;
         };
         /**
+         * ModelCivitaiInfo
+         * @description Civitai details of a local model, from its .civitai.json sidecar.
+         */
+        ModelCivitaiInfo: {
+            /** Model Id */
+            model_id?: number | null;
+            /** Version Id */
+            version_id?: number | null;
+            /** Model Name */
+            model_name?: string | null;
+            /** Version Name */
+            version_name?: string | null;
+            /** Base Model */
+            base_model?: string | null;
+            /**
+             * Trained Words
+             * @default []
+             */
+            trained_words: string[];
+            /**
+             * Nsfw
+             * @default false
+             */
+            nsfw: boolean;
+            /** Url */
+            url?: string | null;
+        };
+        /**
+         * ModelEntry
+         * @description A local model file.
+         */
+        ModelEntry: {
+            /** Name */
+            name: string;
+            /** Path */
+            path: string;
+            civitai?: components["schemas"]["ModelCivitaiInfo"] | null;
+            /**
+             * Has Preview
+             * @default false
+             */
+            has_preview: boolean;
+            /**
+             * Flux Layout
+             * @description Flux checkpoints only: components bundled in the file
+             */
+            flux_layout?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
          * ModelListResponse
          * @description Response containing list of available models.
          */
@@ -1281,9 +1801,7 @@ export interface components {
             /** Resource Type */
             resource_type: string;
             /** Models */
-            models: {
-                [key: string]: string;
-            }[];
+            models: components["schemas"]["ModelEntry"][];
         };
         /**
          * ModelMetadataResponse
@@ -1381,11 +1899,25 @@ export interface components {
 }
 export type BatchGenerationRequest = components['schemas']['BatchGenerationRequest'];
 export type BatchMergeRequest = components['schemas']['BatchMergeRequest'];
+export type CivitaiDownloadRequest = components['schemas']['CivitaiDownloadRequest'];
+export type CivitaiDownloadResponse = components['schemas']['CivitaiDownloadResponse'];
+export type CivitaiFile = components['schemas']['CivitaiFile'];
+export type CivitaiIdentifyRequest = components['schemas']['CivitaiIdentifyRequest'];
+export type CivitaiIdentifyResponse = components['schemas']['CivitaiIdentifyResponse'];
+export type CivitaiLayoutResponse = components['schemas']['CivitaiLayoutResponse'];
+export type CivitaiModelDetail = components['schemas']['CivitaiModelDetail'];
+export type CivitaiModelSummary = components['schemas']['CivitaiModelSummary'];
+export type CivitaiPreview = components['schemas']['CivitaiPreview'];
+export type CivitaiSearchResponse = components['schemas']['CivitaiSearchResponse'];
+export type CivitaiStats = components['schemas']['CivitaiStats'];
+export type CivitaiStatusResponse = components['schemas']['CivitaiStatusResponse'];
+export type CivitaiVersion = components['schemas']['CivitaiVersion'];
 export type CompareModelsRequest = components['schemas']['CompareModelsRequest'];
 export type FluxBatchGenerationRequest = components['schemas']['FluxBatchGenerationRequest'];
 export type FluxCompareModelsRequest = components['schemas']['FluxCompareModelsRequest'];
 export type FluxGenerationRequest = components['schemas']['FluxGenerationRequest'];
 export type FluxInpaintRequest = components['schemas']['FluxInpaintRequest'];
+export type FluxLayout = components['schemas']['FluxLayout'];
 export type GenerationRequest = components['schemas']['GenerationRequest'];
 export type HttpValidationError = components['schemas']['HTTPValidationError'];
 export type HealthResponse = components['schemas']['HealthResponse'];
@@ -1396,6 +1928,8 @@ export type LoraConfig = components['schemas']['LoraConfig'];
 export type MergeRecipeRequest = components['schemas']['MergeRecipeRequest'];
 export type MergeRecipeStep = components['schemas']['MergeRecipeStep'];
 export type MergeRequest = components['schemas']['MergeRequest'];
+export type ModelCivitaiInfo = components['schemas']['ModelCivitaiInfo'];
+export type ModelEntry = components['schemas']['ModelEntry'];
 export type ModelListResponse = components['schemas']['ModelListResponse'];
 export type ModelMetadataResponse = components['schemas']['ModelMetadataResponse'];
 export type OutputItem = components['schemas']['OutputItem'];
@@ -1964,6 +2498,39 @@ export interface operations {
             };
         };
     };
+    get_model_preview_api_v1_models__model_type___resource_type___model_name__preview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                model_type: string;
+                resource_type: string;
+                model_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_model_metadata_api_v1_models__model_type___resource_type___model_name__metadata_get: {
         parameters: {
             query?: never;
@@ -2404,6 +2971,196 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    civitai_status_api_v1_civitai_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CivitaiStatusResponse"];
+                };
+            };
+        };
+    };
+    search_models_api_v1_civitai_search_get: {
+        parameters: {
+            query: {
+                model_type: string;
+                resource_type: string;
+                query?: string | null;
+                sort?: string;
+                period?: string;
+                nsfw?: boolean | null;
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CivitaiSearchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_model_api_v1_civitai_models__model_id__get: {
+        parameters: {
+            query: {
+                model_type: string;
+                nsfw?: boolean | null;
+            };
+            header?: never;
+            path: {
+                model_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CivitaiModelDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_file_api_v1_civitai_downloads_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CivitaiDownloadRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CivitaiDownloadResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    file_layout_api_v1_civitai_files_layout_get: {
+        parameters: {
+            query: {
+                version_id: number;
+                file_id: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CivitaiLayoutResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    identify_model_api_v1_civitai_identify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CivitaiIdentifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CivitaiIdentifyResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

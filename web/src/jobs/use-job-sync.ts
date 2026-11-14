@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
 import { useJobs } from '@/api/queries'
-import type { JobState } from '@/api/types'
+import type { JobDetail, JobLane, JobState } from '@/api/types'
 import { toolPath } from '@/lib/navigation'
 
 import { isActive, JOB_TOOL, jobStore, useTrackedJobs, type TrackedJob } from './job-store'
@@ -66,10 +66,14 @@ export function useJobSync() {
   useEffect(() => {
     if (!isSuccess || !backendJobs) return
     const byId = new Map(backendJobs.map((j) => [j.job_id, j]))
+    // Each lane has its own workers, so queue positions count jobs of the same lane only.
     const queued = backendJobs
       .filter((j) => j.status === 'queued')
       .sort((a, b) => a.created_at.localeCompare(b.created_at))
-      .map((j) => j.job_id)
+    const queuePosition = (id: string, lane: string) => {
+      const position = queued.filter((j) => (j.lane ?? 'gpu') === lane).findIndex((j) => j.job_id === id)
+      return position >= 0 ? position + 1 : undefined
+    }
 
     const patches = new Map<string, Partial<TrackedJob>>()
     const finished: TrackedJob[] = []
@@ -84,15 +88,27 @@ export function useJobSync() {
         continue
       }
       const status = remote.status as JobState
-      const position = queued.indexOf(job.id)
+      const lane = (remote.lane ?? 'gpu') as JobLane
       const patch: Partial<TrackedJob> = {
         status,
         startedAt: remote.started_at,
         completedAt: remote.completed_at,
         error: remote.error,
-        queuePosition: position >= 0 ? position + 1 : undefined,
+        queuePosition: queuePosition(job.id, lane),
+        lane,
+        cancellable: remote.cancellable ?? false,
+        progress: remote.progress,
+        detail: (remote.detail ?? null) as JobDetail | null,
       }
-      if (status !== job.status || patch.queuePosition !== job.queuePosition) patches.set(job.id, patch)
+      if (
+        status !== job.status ||
+        patch.queuePosition !== job.queuePosition ||
+        patch.progress !== job.progress ||
+        patch.cancellable !== job.cancellable ||
+        JSON.stringify(patch.detail) !== JSON.stringify(job.detail ?? null)
+      ) {
+        patches.set(job.id, patch)
+      }
       if (!isActive({ status })) finished.push({ ...job, ...patch })
     }
     jobStore.update(patches)

@@ -1,10 +1,11 @@
 // Mock sd-api-backend for UI development and end-to-end tests.
 //
 // Mirrors the real backend's behaviour where the UI depends on it: a single
-// sequential worker, jobs going queued -> running -> completed/failed/cancelled,
-// progress that jumps from 0 to 1 on completion, the same result shapes, and
-// persisted outputs with the backend's metadata layout. Images are generated
-// gradients encoded as real PNGs.
+// sequential GPU-lane worker, jobs going queued -> running -> completed/failed/
+// cancelled, progress that jumps from 0 to 1 on completion, cancelled running
+// jobs finishing with their result discarded, the same result shapes, model
+// lists with Civitai details and previews, and persisted outputs with the
+// backend's metadata layout. Images are generated gradients encoded as real PNGs.
 //
 // Knobs:  MOCK_PORT (8010), MOCK_SPEED (1 = realistic-ish, 0.2 = fast).
 // A prompt containing "fail" makes the job fail; "slow" makes it 5x slower.
@@ -38,6 +39,69 @@ const models = {
     loras: ['flux_realism.safetensors'],
     vaes: ['ae.safetensors'],
   },
+}
+
+// Civitai sidecar details for some models, as the backend lists them.
+const civitai = {
+  'dreamshaper_8.safetensors': {
+    model_id: 4384,
+    version_id: 128713,
+    model_name: 'DreamShaper',
+    version_name: '8',
+    base_model: 'SD 1.5',
+    trained_words: [],
+    nsfw: false,
+    url: 'https://civitai.com/models/4384?modelVersionId=128713',
+  },
+  'watercolor_style.safetensors': {
+    model_id: 1001,
+    version_id: 2002,
+    model_name: 'Watercolor Style',
+    version_name: 'v2',
+    base_model: 'SD 1.5',
+    trained_words: ['wcstyle', 'watercolor painting'],
+    nsfw: false,
+    url: 'https://civitai.com/models/1001?modelVersionId=2002',
+  },
+  'realisticVision_v60.safetensors': {
+    model_id: 4201,
+    version_id: 245598,
+    model_name: 'Realistic Vision',
+    version_name: 'V6.0 B1',
+    base_model: 'SD 1.5',
+    trained_words: [],
+    nsfw: true,
+    url: 'https://civitai.com/models/4201?modelVersionId=245598',
+  },
+}
+// Flux checkpoints: which components each file bundles.
+const fluxLayouts = {
+  'flux1-dev.safetensors': {
+    transformer: true,
+    clip_l: false,
+    t5xxl: false,
+    vae: false,
+    format: 'diffusers',
+    variant: 'dev',
+  },
+  'flux1-schnell.safetensors': {
+    transformer: true,
+    clip_l: true,
+    t5xxl: true,
+    vae: true,
+    format: 'comfy',
+    variant: 'schnell',
+  },
+}
+
+function modelEntry(family, resource, name) {
+  return {
+    name,
+    path: `models/${resource}/${family}/${name}`,
+    civitai: civitai[name] ?? null,
+    has_preview: name in civitai,
+    flux_layout: family === 'flux' && resource === 'checkpoints' ? (fluxLayouts[name] ?? null) : null,
+  }
 }
 
 // Snapshot so tests can reset merges back to the original model lists.
@@ -129,8 +193,11 @@ function submit(jobType, durationMs, run) {
   const job = {
     job_id: randomUUID(),
     job_type: jobType,
+    lane: 'gpu',
+    cancellable: false,
     status: 'queued',
     progress: 0,
+    detail: null,
     created_at: new Date().toISOString(),
     started_at: null,
     completed_at: null,
@@ -151,15 +218,20 @@ function pump() {
   next.status = 'running'
   next.started_at = new Date().toISOString()
   setTimeout(() => {
-    // Like the real worker: cancelling a running job doesn't stop it, and
-    // completion overwrites the "cancelled" status.
+    // Like the real GPU worker: cancelling a running job doesn't stop it, but
+    // its result is discarded and it stays cancelled.
     try {
-      next.result = next.run()
-      next.status = 'completed'
-      next.progress = 1
+      const result = next.run()
+      if (next.status !== 'cancelled') {
+        next.result = result
+        next.status = 'completed'
+        next.progress = 1
+      }
     } catch (e) {
-      next.status = 'failed'
-      next.error = e.message
+      if (next.status !== 'cancelled') {
+        next.status = 'failed'
+        next.error = e.message
+      }
     }
     next.completed_at = new Date().toISOString()
     running = null
@@ -233,12 +305,20 @@ route('GET', '/api/v1/system/info', (_req, res) => {
     dtype: 'torch.float16',
     vendor: 'nvidia',
     gpu_name: 'NVIDIA RTX 4090 (mock)',
-    cache_stats: { cached_models: 1, max_models: 2, cache_keys: ['sdxl:juggernautXL_v9'] },
+    cache_stats: { cached_models: 1, max_models: 2, in_use: running ? 1 : 0, cache_keys: ['sdxl:juggernautXL_v9'] },
     queue_stats: {
       queue_size: all.filter((j) => j.status === 'queued').length,
       total_jobs: all.length,
       num_workers: 1,
       workers_running: true,
+      lanes: {
+        gpu: {
+          queue_size: all.filter((j) => j.status === 'queued').length,
+          num_workers: 1,
+          running_jobs: running ? 1 : 0,
+        },
+        io: { queue_size: 0, num_workers: 2, running_jobs: 0 },
+      },
     },
     gpu_stats: {
       available: true,
@@ -257,6 +337,22 @@ route('GET', '/api/v1/system/info', (_req, res) => {
     },
   })
 })
+route('GET', '/api/v1/civitai/status', (_req, res) =>
+  send(res, 200, {
+    enabled: true,
+    has_api_key: false,
+    nsfw_default: false,
+    model_types: {
+      sd15: ['SD 1.4', 'SD 1.5'],
+      sdxl: ['SDXL 1.0', 'Pony'],
+      illustrious: ['Illustrious', 'NoobAI'],
+      flux: ['Flux.1 D', 'Flux.1 S'],
+    },
+    resource_types: { checkpoints: ['Checkpoint'], loras: ['LORA', 'LoCon', 'DoRA'], vaes: ['VAE'] },
+    sort_options: ['Highest Rated', 'Most Downloaded', 'Newest'],
+    period_options: ['AllTime', 'Year', 'Month', 'Week', 'Day'],
+  }),
+)
 route('GET', '/api/v1/info/schedulers', (_req, res) => send(res, 200, SD_SCHEDULERS))
 
 route('GET', '/api/v1/models/:family/:resource', (_req, res, { family, resource }) => {
@@ -264,8 +360,15 @@ route('GET', '/api/v1/models/:family/:resource', (_req, res, { family, resource 
   send(res, 200, {
     model_type: family,
     resource_type: resource,
-    models: models[family][resource].map((name) => ({ name, path: `models/${resource}/${family}/${name}` })),
+    models: models[family][resource].map((name) => modelEntry(family, resource, name)),
   })
+})
+route('GET', '/api/v1/models/:family/:resource/:name/preview', (_req, res, { family, resource, name }) => {
+  name = decodeURIComponent(name)
+  if (!models[family]?.[resource]?.includes(name)) return send(res, 404, { detail: 'Model not found' })
+  if (!(name in civitai)) return send(res, 404, { detail: 'No preview for this model' })
+  res.writeHead(200, { 'content-type': 'image/png' })
+  res.end(Buffer.from(renderImage(128, 128, civitai[name].version_id, name), 'base64'))
 })
 route('GET', '/api/v1/models/:family/:resource/:name/metadata', (_req, res, { family, resource, name }) => {
   name = decodeURIComponent(name)
@@ -338,10 +441,11 @@ route('GET', '/api/v1/jobs/:id', (_req, res, { id }) => {
 })
 route('DELETE', '/api/v1/jobs/:id', (_req, res, { id }) => {
   const job = jobs.get(id)
-  if (!job || job.status === 'completed' || job.status === 'failed')
-    return send(res, 400, { detail: 'Job cannot be cancelled (already completed or failed)' })
+  if (!job || ['completed', 'failed', 'cancelled'].includes(job.status))
+    return send(res, 400, { detail: 'Job cannot be cancelled (not found or already finished)' })
+  // A queued job is finished now; a running one when its worker gets to the end.
+  if (job.status === 'queued') job.completed_at = new Date().toISOString()
   job.status = 'cancelled'
-  job.completed_at = new Date().toISOString()
   send(res, 200, { message: 'Job cancelled successfully', job_id: id })
 })
 

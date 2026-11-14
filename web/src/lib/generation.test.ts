@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  appendToPrompt,
   defaultParams,
   estimateTokens,
   paramsFromOutputMetadata,
@@ -118,5 +119,17 @@ describe('estimateTokens', () => {
     expect(estimateTokens('')).toBe(0)
     expect(estimateTokens('a red fox, sitting')).toBe(5)
     expect(estimateTokens('photorealistic')).toBeGreaterThan(1)
+  })
+})
+
+describe('appendToPrompt', () => {
+  it('appends comma-separated words, skipping ones already present', () => {
+    expect(appendToPrompt('a cat, Watercolor', ['watercolor', 'wcstyle'])).toBe('a cat, Watercolor, wcstyle')
+    expect(appendToPrompt('a cat,', ['wcstyle'])).toBe('a cat, wcstyle')
+    expect(appendToPrompt('', ['wcstyle', ' '])).toBe('wcstyle')
+  })
+
+  it('leaves the prompt untouched when nothing is new', () => {
+    expect(appendToPrompt('a cat, wcstyle ', ['WCSTYLE'])).toBe('a cat, wcstyle ')
   })
 })

@@ -89,9 +89,12 @@ jobs in `jobs/job-store.ts` (localStorage, so the queue and recent results survi
 shell polls `GET /jobs/`, which returns statuses without images, while anything is active. It then fetches each
 completed job once and turns the image into an object URL.
 
-The backend reports no progress until a job finishes, so running jobs show elapsed time and an indeterminate bar,
-never a percentage. Cancelling a running job doesn't stop it on the backend, so the UI only offers Cancel for
-queued jobs. Results expire on the backend after an hour; persisted images remain in the gallery.
+Jobs run on lanes with their own workers (`gpu` for generation and merges, `io` for downloads), so queue
+positions count jobs of the same lane only. Only some jobs report intermediate progress; the others show elapsed
+time and an indeterminate bar, never a made-up percentage. Queued jobs can be cancelled. A running job is
+interrupted only when the backend marks it `cancellable`; otherwise (generation, merges) it keeps running to
+completion on the backend and only its result is discarded, which the UI asks to confirm. Results expire on the
+backend after an hour; persisted images remain in the gallery.
 
 **Model families** (`sd15`, `sdxl`, `illustrious`, `flux`) are described once in `src/lib/families.ts`
 (defaults, resolution presets, scheduler overrides, Flux's `true_cfg_scale`). Pages are written once and

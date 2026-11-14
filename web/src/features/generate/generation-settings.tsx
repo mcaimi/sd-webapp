@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { FAMILIES, type FamilyId } from '@/lib/families'
-import { MAX_BATCH, type GenerationParams } from '@/lib/generation'
+import { appendToPrompt, MAX_BATCH, type GenerationParams } from '@/lib/generation'
 import { cn } from '@/lib/utils'
 
 interface GenerationSettingsProps {
@@ -66,7 +66,14 @@ export function GenerationSettings({
         </div>
       )}
 
-      {showAdapters && <LoraList family={family} value={params.loras} onChange={(loras) => onChange({ loras })} />}
+      {showAdapters && (
+        <LoraList
+          family={family}
+          value={params.loras}
+          onChange={(loras) => onChange({ loras })}
+          onInsertTriggerWords={(words) => onChange({ prompt: appendToPrompt(params.prompt, words) })}
+        />
+      )}
 
       {(showModel || showAdapters) && <Separator />}
 

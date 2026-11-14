@@ -84,6 +84,23 @@ export function toApiParams(family: FamilyId, params: GenerationParams, seed: nu
  * English words are one token, long or rare words several. Good enough to warn
  * about the 77-token window without shipping a tokenizer.
  */
+/**
+ * Append words (e.g. a LoRA's trigger words) to a comma-separated prompt,
+ * skipping those already in it.
+ */
+export function appendToPrompt(prompt: string, words: string[]): string {
+  const present = new Set(
+    prompt
+      .split(',')
+      .map((p) => p.trim().toLowerCase())
+      .filter(Boolean),
+  )
+  const added = words.map((w) => w.trim()).filter((w) => w && !present.has(w.toLowerCase()))
+  if (!added.length) return prompt
+  const base = prompt.trimEnd().replace(/,$/, '')
+  return [base, ...added].filter(Boolean).join(', ')
+}
+
 export function estimateTokens(text: string): number {
   const pieces: string[] = text.toLowerCase().match(/[a-z]+|\d|[^\sa-z\d]/g) ?? []
   return pieces.reduce((sum, piece) => sum + (piece.length > 7 ? Math.ceil(piece.length / 5) : 1), 0)

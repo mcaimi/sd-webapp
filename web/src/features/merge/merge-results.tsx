@@ -1,14 +1,13 @@
-import { Download, FlaskConical, GitMerge, Layers, Sparkles, Trash2, X } from 'lucide-react'
+import { Download, FlaskConical, GitMerge, Layers, Sparkles, Trash2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useNavigate } from 'react-router'
-import { toast } from 'sonner'
 
-import { IndeterminateBar, JobStatus } from '@/components/jobs/job-status'
+import { CancelJobButton } from '@/components/jobs/cancel-job-button'
+import { JobProgressBar, JobStatus } from '@/components/jobs/job-status'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useJobResult } from '@/jobs/job-results'
 import { isActive, jobStore, type JobKind, type TrackedJob } from '@/jobs/job-store'
-import { cancelJob } from '@/jobs/submit'
 import { download } from '@/lib/download'
 import type { FamilyId } from '@/lib/families'
 import { formatRelative } from '@/lib/format'
@@ -88,28 +87,17 @@ function MergeJobItem({ job, family }: { job: TrackedJob; family: FamilyId }) {
               </span>
             </div>
           </div>
-          {job.status === 'queued' ? (
+          {isActive(job) ? (
+            <CancelJobButton job={job} />
+          ) : (
             <Button
               variant="ghost"
-              size="xs"
-              onClick={() =>
-                cancelJob(job.id).catch((e: Error) => toast.error('Could not cancel', { description: e.message }))
-              }
+              size="icon-xs"
+              aria-label="Remove from list"
+              onClick={() => jobStore.remove([job.id])}
             >
-              <X />
-              Cancel
+              <Trash2 />
             </Button>
-          ) : (
-            !isActive(job) && (
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label="Remove from list"
-                onClick={() => jobStore.remove([job.id])}
-              >
-                <Trash2 />
-              </Button>
-            )
           )}
         </div>
 
@@ -152,7 +140,7 @@ function MergeJobItem({ job, family }: { job: TrackedJob; family: FamilyId }) {
           </ul>
         )}
       </div>
-      {job.status === 'running' && <IndeterminateBar className="absolute inset-x-0 bottom-0" />}
+      {job.status === 'running' && <JobProgressBar job={job} className="absolute inset-x-0 bottom-0" />}
     </motion.li>
   )
 }

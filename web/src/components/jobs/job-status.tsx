@@ -1,13 +1,13 @@
 import { Ban, CircleAlert, Clock, Hourglass, Loader2 } from 'lucide-react'
 
 import { useNow } from '@/hooks/use-now'
-import type { TrackedJob } from '@/jobs/job-store'
-import { formatElapsed } from '@/lib/format'
+import { reportedProgress, type TrackedJob } from '@/jobs/job-store'
+import { formatElapsed, formatPercent } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 /**
- * Status line for a job. The backend reports no intermediate progress, so a
- * running job shows elapsed time rather than a made-up percentage.
+ * Status line for a job. Only some jobs (downloads) report intermediate
+ * progress; the others show elapsed time rather than a made-up percentage.
  */
 export function JobStatus({ job, className }: { job: TrackedJob; className?: string }) {
   const now = useNow(job.status === 'running' || job.status === 'queued')
@@ -23,10 +23,12 @@ export function JobStatus({ job, className }: { job: TrackedJob; className?: str
         )
       case 'running': {
         const started = Date.parse(job.startedAt ?? job.submittedAt)
+        const progress = reportedProgress(job)
         return (
           <>
             <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden />
-            Running · {formatElapsed(now - started)}
+            Running · {progress !== undefined && `${formatPercent(progress * 100)} · `}
+            {formatElapsed(now - started)}
           </>
         )
       }
@@ -68,6 +70,17 @@ export function IndeterminateBar({ className }: { className?: string }) {
   return (
     <div className={cn('h-0.5 w-full overflow-hidden bg-primary/15', className)} aria-hidden>
       <div className="indeterminate-bar h-full w-1/3 bg-primary" />
+    </div>
+  )
+}
+
+/** Bottom bar for a running job: determinate when it reports progress, indeterminate otherwise. */
+export function JobProgressBar({ job, className }: { job: TrackedJob; className?: string }) {
+  const progress = reportedProgress(job)
+  if (progress === undefined) return <IndeterminateBar className={className} />
+  return (
+    <div className={cn('h-0.5 w-full bg-primary/15', className)} aria-hidden>
+      <div className="h-full bg-primary transition-[width] duration-500" style={{ width: `${progress * 100}%` }} />
     </div>
   )
 }
