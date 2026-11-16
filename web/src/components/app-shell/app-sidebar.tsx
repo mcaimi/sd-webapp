@@ -1,5 +1,7 @@
 import { NavLink, useLocation } from 'react-router'
 
+import { ResizeHandle } from '@/components/resize-handle'
+
 import {
   Sidebar,
   SidebarContent,
@@ -15,6 +17,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { FAMILIES } from '@/lib/families'
+import { DEFAULT_LAYOUT, MENU_RANGE, useLayout } from '@/lib/layout'
 import { PAGES, TOOLS, toolPath } from '@/lib/navigation'
 import { useActiveFamily } from '@/lib/use-active-family'
 
@@ -24,7 +27,8 @@ import { HealthIndicator } from './health-indicator'
 export function AppSidebar() {
   const [family] = useActiveFamily()
   const { pathname } = useLocation()
-  const { isMobile, setOpenMobile } = useSidebar()
+  const { isMobile, setOpenMobile, state } = useSidebar()
+  const { layout, setMenu } = useLayout()
   // Close the off-canvas drawer after navigating on small screens.
   const onNavigate = () => isMobile && setOpenMobile(false)
 
@@ -72,7 +76,22 @@ export function AppSidebar() {
       <SidebarFooter>
         <HealthIndicator />
       </SidebarFooter>
-      <SidebarRail />
+      {/* Expanded: drag to resize. Collapsed: the rail expands it again. */}
+      {state === 'expanded' ? (
+        <ResizeHandle
+          label="Resize navigation"
+          value={layout.menu}
+          min={MENU_RANGE[0]}
+          max={MENU_RANGE[1]}
+          onDrag={(x) => setMenu((x / window.innerWidth) * 100)}
+          onStep={(delta) => setMenu(layout.menu + delta)}
+          onReset={() => setMenu(DEFAULT_LAYOUT.menu)}
+          subtle
+          className="absolute inset-y-0 right-0 z-20 translate-x-1/2"
+        />
+      ) : (
+        <SidebarRail />
+      )}
     </Sidebar>
   )
 }
