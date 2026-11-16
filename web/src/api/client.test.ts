@@ -21,4 +21,10 @@ describe('unwrap', () => {
       'model_checkpoint: Field required',
     )
   })
+
+  it('uses the message of an object detail and keeps the detail', async () => {
+    const detail = { message: "Base model doesn't match", warnings: ['Made for SDXL 1.0'] }
+    const result = unwrap(Promise.resolve({ error: { detail }, response: response(409) }))
+    await expect(result).rejects.toMatchObject({ status: 409, message: "Base model doesn't match", detail })
+  })
 })

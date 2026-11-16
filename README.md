@@ -12,10 +12,16 @@ or model files of its own.
   and its own settings (e.g. Flux's True CFG and FlowMatch schedulers).
 - **Generate:** batches of up to 8, side-by-side checkpoint comparisons on the same seed, LoRAs with strength
   sliders, custom VAEs, seed locking, and a prompt token counter. Any result's settings can be loaded back.
+- **Model details:** pickers show Civitai names and preview images for models the backend matched on Civitai
+  (NSFW previews blurred), LoRA trigger words can be added to the prompt with a click, and Flux checkpoints list
+  the components they bundle.
 - **Inpaint:** drop, browse or paste an image and paint the mask with brush and eraser, undo/redo and touch
   support. A before/after slider compares the result with the original.
 - **Merge:** linear, SLERP, additive and subtractive merges, in single, batch or multi-step recipe mode, with
   downloads and one click to use the new checkpoint.
+- **Models:** installed checkpoints, LoRAs and VAEs with their Civitai details, one-click identification of
+  unlinked files by hash, and a Civitai browser: search with filters, version and file details with compatibility
+  checks, Flux component checks, and downloads with live progress.
 - **Gallery:** browse everything the backend has saved, view the generation details, remix an image into a new
   generation, and delete with undo.
 - **Background jobs:** keep working while jobs queue and run. A jobs panel and toasts track them, with optional

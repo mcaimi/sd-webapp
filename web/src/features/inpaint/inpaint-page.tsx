@@ -7,6 +7,7 @@ import { useModels } from '@/api/queries'
 import { PromptField } from '@/components/form/prompt-field'
 import { SliderField } from '@/components/form/slider-field'
 import { ImageResults } from '@/components/jobs/image-results'
+import { ParamsResizeHandle } from '@/components/params-resize-handle'
 import { Button } from '@/components/ui/button'
 import { Kbd } from '@/components/ui/kbd'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -18,6 +19,7 @@ import { useDraft } from '@/lib/drafts'
 import { FAMILIES, type FamilyId } from '@/lib/families'
 import { paramsFromRequest } from '@/lib/generation'
 import { patchGenerationDraft, useGenerationDraft } from '@/lib/generation-draft'
+import { PARAMS_GRID, useParamsGridStyle } from '@/lib/layout'
 import { MOD_KEY } from '@/lib/platform'
 
 import { BeforeAfter } from './before-after'
@@ -88,6 +90,7 @@ export function InpaintPage({ family }: { family: FamilyId }) {
     toast.success('Settings loaded into the form')
   }
 
+  const paramsGridStyle = useParamsGridStyle()
   const showNegative = info.negativePrompt || params.trueCfgScale > 1
   const settings = (
     <GenerationSettings
@@ -127,7 +130,7 @@ export function InpaintPage({ family }: { family: FamilyId }) {
   )
 
   return (
-    <div className="grid flex-1 gap-6 pb-24 lg:grid-cols-[minmax(20rem,24rem)_1fr] lg:pb-0">
+    <div className={`grid flex-1 gap-6 pb-24 lg:gap-x-2 lg:pb-0 ${PARAMS_GRID}`} style={paramsGridStyle}>
       <aside className="order-2 space-y-5 lg:order-none lg:sticky lg:top-20 lg:max-h-[calc(100svh-6.5rem)] lg:self-start lg:overflow-y-auto lg:pr-2">
         <PromptField
           label="Prompt"
@@ -164,6 +167,8 @@ export function InpaintPage({ family }: { family: FamilyId }) {
           </p>
         </div>
       </aside>
+
+      <ParamsResizeHandle />
 
       <div className="order-1 min-w-0 space-y-8 lg:order-none">
         <section aria-label="Image and mask">

@@ -1,4 +1,4 @@
-import { Bell, GitMerge, ListTodo, Trash2, X } from 'lucide-react'
+import { Bell, Download, GitMerge, ListTodo, Trash2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
@@ -11,13 +11,14 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Switch } from '@/components/ui/switch'
 import { useJobResult } from '@/jobs/job-results'
 import { isActive, JOB_TOOL, jobStore, useTrackedJobs, type TrackedJob } from '@/jobs/job-store'
-import { cancelJob } from '@/jobs/submit'
 import { notifyPreference, useNotifyPreference } from '@/jobs/use-job-sync'
+import { downloadProgressText } from '@/lib/civitai'
 import { FAMILIES } from '@/lib/families'
 import { formatRelative } from '@/lib/format'
 import { toolPath } from '@/lib/navigation'
 
-import { IndeterminateBar, JobStatus } from './job-status'
+import { CancelJobButton } from './cancel-job-button'
+import { JobProgressBar, JobStatus } from './job-status'
 
 /** Header button + side panel listing every job submitted from this browser. */
 export function JobDock() {
@@ -147,33 +148,27 @@ function JobRow({ job, onNavigate }: { job: TrackedJob; onNavigate: () => void }
               <JobStatus job={job} />
               {!isActive(job) && <span className="text-xs">· {formatRelative(job.submittedAt)}</span>}
             </div>
+            {job.kind === 'download' && job.status === 'running' && (
+              <p className="truncate text-xs text-muted-foreground tabular-nums">
+                {downloadProgressText(job.detail) ?? 'Starting…'}
+              </p>
+            )}
           </div>
         </button>
-        {job.status === 'queued' ? (
+        {isActive(job) ? (
+          <CancelJobButton job={job} iconOnly />
+        ) : (
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Cancel job"
-            onClick={() =>
-              cancelJob(job.id).catch((e: Error) => toast.error('Could not cancel', { description: e.message }))
-            }
+            aria-label="Remove from list"
+            onClick={() => jobStore.remove([job.id])}
           >
-            <X />
+            <Trash2 />
           </Button>
-        ) : (
-          !isActive(job) && (
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Remove from list"
-              onClick={() => jobStore.remove([job.id])}
-            >
-              <Trash2 />
-            </Button>
-          )
         )}
       </div>
-      {job.status === 'running' && <IndeterminateBar className="absolute inset-x-0 bottom-0" />}
+      {job.status === 'running' && <JobProgressBar job={job} className="absolute inset-x-0 bottom-0" />}
     </motion.li>
   )
 }
@@ -181,12 +176,13 @@ function JobRow({ job, onNavigate }: { job: TrackedJob; onNavigate: () => void }
 function JobThumb({ job }: { job: TrackedJob }) {
   const result = useJobResult(job)
   const isMerge = job.kind.endsWith('merge')
+  const Icon = isMerge ? GitMerge : job.kind === 'download' ? Download : undefined
   return (
     <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
       {result.data?.type === 'image' ? (
         <img src={result.data.imageUrl} alt="" className="size-full object-cover" />
-      ) : isMerge ? (
-        <GitMerge className="size-4 text-muted-foreground" aria-hidden />
+      ) : Icon ? (
+        <Icon className="size-4 text-muted-foreground" aria-hidden />
       ) : (
         isActive(job) && <div className="shimmer size-full" />
       )}

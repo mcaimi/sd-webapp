@@ -6,8 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import type { FamilyId, ResourceType } from '@/lib/families'
-import { modelDisplayName as displayName } from '@/lib/models'
+import { civitaiLabel, modelDisplayName as displayName } from '@/lib/models'
 import { cn } from '@/lib/utils'
+
+import { ModelThumb } from './model-thumb'
+import { NsfwBadge } from './nsfw-badge'
 
 interface ModelComboboxProps {
   family: FamilyId
@@ -38,6 +41,8 @@ export function ModelCombobox({
   const [open, setOpen] = useState(false)
   const { data = [], isPending, isError } = useModels(family, resource)
   const options = data.filter((m) => !exclude.includes(m.name))
+  // Only reserve thumbnail space when some model actually has a preview.
+  const withThumbs = options.some((m) => m.has_preview)
   const select = (name: string) => {
     onChange(name)
     setOpen(false)
@@ -71,12 +76,25 @@ export function ModelCombobox({
                 {noneLabel}
               </CommandItem>
             )}
-            {options.map((m) => (
-              <CommandItem key={m.name} value={m.name} onSelect={() => select(m.name)}>
-                <span className="truncate">{displayName(m.name)}</span>
-                <Check className={cn('ml-auto', value === m.name ? 'opacity-100' : 'opacity-0')} />
-              </CommandItem>
-            ))}
+            {options.map((m) => {
+              const civitai = civitaiLabel(m)
+              return (
+                <CommandItem
+                  key={m.name}
+                  value={m.name}
+                  keywords={civitai ? [civitai] : undefined}
+                  onSelect={() => select(m.name)}
+                >
+                  {withThumbs && <ModelThumb family={family} resource={resource} model={m} className="size-8" />}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate">{displayName(m.name)}</span>
+                    {civitai && <span className="block truncate text-xs text-muted-foreground">{civitai}</span>}
+                  </span>
+                  {m.civitai?.nsfw && <NsfwBadge />}
+                  <Check className={cn(value === m.name ? 'opacity-100' : 'opacity-0')} />
+                </CommandItem>
+              )
+            })}
           </CommandList>
         </Command>
       </PopoverContent>

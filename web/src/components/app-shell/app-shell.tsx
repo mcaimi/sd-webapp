@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { Search } from 'lucide-react'
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { useLocation, useMatch, useOutlet } from 'react-router'
 
 import { JobDock } from '@/components/jobs/job-dock'
@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { useJobSync } from '@/jobs/use-job-sync'
 import { FAMILIES, isFamilyId } from '@/lib/families'
+import { useLayout } from '@/lib/layout'
 import { PAGES, TOOLS } from '@/lib/navigation'
 import { MOD_KEY } from '@/lib/platform'
 
@@ -55,10 +56,12 @@ function AnimatedOutlet() {
 export function AppShell() {
   const [commandOpen, setCommandOpen] = useState(false)
   const breadcrumb = useBreadcrumb()
+  const { layout } = useLayout()
   useJobSync()
 
   return (
-    <SidebarProvider>
+    // The floor keeps navigation labels readable on narrow desktop windows.
+    <SidebarProvider style={{ '--sidebar-width': `max(12rem, ${layout.menu}vw)` } as CSSProperties}>
       <AppSidebar />
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 rounded-t-xl border-b bg-background/80 px-3 backdrop-blur-md md:px-4">

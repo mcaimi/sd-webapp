@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatBytes, formatPercent } from './format'
+import { formatBytes, formatCount, formatPercent } from './format'
 
 describe('formatBytes', () => {
   it.each([
@@ -18,5 +18,16 @@ describe('formatBytes', () => {
 describe('formatPercent', () => {
   it('rounds to whole percent', () => {
     expect(formatPercent(55.2)).toBe('55%')
+  })
+})
+
+describe('formatCount', () => {
+  it.each([
+    [0, '0'],
+    [999, '999'],
+    [1234, '1.2K'],
+    [2_500_000, '2.5M'],
+  ])('%d -> %s', (value, expected) => {
+    expect(formatCount(value)).toBe(expected)
   })
 })

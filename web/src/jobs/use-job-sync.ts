@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
 import { useJobs } from '@/api/queries'
-import type { JobState } from '@/api/types'
+import type { JobDetail, JobLane, JobState } from '@/api/types'
 import { toolPath } from '@/lib/navigation'
 
 import { isActive, JOB_TOOL, jobStore, useTrackedJobs, type TrackedJob } from './job-store'
@@ -40,6 +40,7 @@ function describeGroup(jobs: TrackedJob[]): string {
   const { kind, label } = jobs[0]
   if (kind === 'merge' || kind === 'recipe-merge') return `Merge finished: ${label}`
   if (kind === 'batch-merge') return 'Batch merge finished'
+  if (kind === 'download') return `Downloaded ${label}`
   if (kind === 'inpaint') return 'Inpainting ready'
   const done = jobs.filter((j) => j.status === 'completed').length
   return done === 1 ? 'Image ready' : `${done} images ready`
@@ -66,10 +67,14 @@ export function useJobSync() {
   useEffect(() => {
     if (!isSuccess || !backendJobs) return
     const byId = new Map(backendJobs.map((j) => [j.job_id, j]))
+    // Each lane has its own workers, so queue positions count jobs of the same lane only.
     const queued = backendJobs
       .filter((j) => j.status === 'queued')
       .sort((a, b) => a.created_at.localeCompare(b.created_at))
-      .map((j) => j.job_id)
+    const queuePosition = (id: string, lane: string) => {
+      const position = queued.filter((j) => (j.lane ?? 'gpu') === lane).findIndex((j) => j.job_id === id)
+      return position >= 0 ? position + 1 : undefined
+    }
 
     const patches = new Map<string, Partial<TrackedJob>>()
     const finished: TrackedJob[] = []
@@ -84,23 +89,39 @@ export function useJobSync() {
         continue
       }
       const status = remote.status as JobState
-      const position = queued.indexOf(job.id)
+      const lane = (remote.lane ?? 'gpu') as JobLane
       const patch: Partial<TrackedJob> = {
         status,
         startedAt: remote.started_at,
         completedAt: remote.completed_at,
         error: remote.error,
-        queuePosition: position >= 0 ? position + 1 : undefined,
+        queuePosition: queuePosition(job.id, lane),
+        lane,
+        cancellable: remote.cancellable ?? false,
+        progress: remote.progress,
+        detail: (remote.detail ?? null) as JobDetail | null,
       }
-      if (status !== job.status || patch.queuePosition !== job.queuePosition) patches.set(job.id, patch)
+      if (
+        status !== job.status ||
+        patch.queuePosition !== job.queuePosition ||
+        patch.progress !== job.progress ||
+        patch.cancellable !== job.cancellable ||
+        JSON.stringify(patch.detail) !== JSON.stringify(job.detail ?? null)
+      ) {
+        patches.set(job.id, patch)
+      }
       if (!isActive({ status })) finished.push({ ...job, ...patch })
     }
     jobStore.update(patches)
     if (!finished.length) return
 
     // Refresh data the finished jobs changed.
-    if (finished.some((j) => j.kind.endsWith('merge') && j.status === 'completed')) {
+    if (finished.some((j) => (j.kind.endsWith('merge') || j.kind === 'download') && j.status === 'completed')) {
       queryClient.invalidateQueries({ queryKey: ['models'] })
+    }
+    if (finished.some((j) => j.kind === 'download')) {
+      // Civitai file lists say which files are already local.
+      queryClient.invalidateQueries({ queryKey: ['civitai-model'] })
     }
     if (
       finished.some(
@@ -125,8 +146,9 @@ export function useJobSync() {
       if (!group.some((j) => j.status === 'completed')) continue
       const title = describeGroup(group)
       const path = toolPath(JOB_TOOL[group[0].kind], group[0].family)
-      // Merge titles already name the output; generation titles don't name the prompt.
-      const description = group[0].kind.endsWith('merge') ? undefined : group[0].label
+      // Merge and download titles already name the file; generation titles don't name the prompt.
+      const namesFile = group[0].kind.endsWith('merge') || group[0].kind === 'download'
+      const description = namesFile ? undefined : group[0].label
       toast.success(title, {
         description,
         action: { label: 'View', onClick: () => navigate(path) },

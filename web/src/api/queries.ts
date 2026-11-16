@@ -2,8 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { FAMILIES, type FamilyId, type ResourceType } from '@/lib/families'
 
-import { api, unwrap } from './client'
-import type { ModelEntry } from './types'
+import { api, ApiError, unwrap } from './client'
 
 export const queryKeys = {
   health: ['health'] as const,
@@ -13,6 +12,7 @@ export const queryKeys = {
   modelMetadata: (family: FamilyId, resource: ResourceType, name: string) =>
     ['model-metadata', family, resource, name] as const,
   jobs: ['jobs'] as const,
+  civitaiStatus: ['civitai-status'] as const,
 }
 
 export function useHealth() {
@@ -53,7 +53,7 @@ export function useModels(family: FamilyId, resource: ResourceType) {
           params: { path: { model_type: family, resource_type: resource } },
         }),
       ),
-    select: (data) => data.models as unknown as ModelEntry[],
+    select: (data) => data.models,
     staleTime: 60_000,
   })
 }
@@ -79,5 +79,22 @@ export function useJobs(options: { enabled?: boolean; refetchInterval?: number |
     queryFn: () => unwrap(api.GET('/api/v1/jobs/')),
     enabled: options.enabled ?? true,
     refetchInterval: options.refetchInterval ?? 2_000,
+  })
+}
+
+/** Civitai integration settings, or null when the backend has it disabled (it answers 404). */
+export function useCivitaiStatus() {
+  return useQuery({
+    queryKey: queryKeys.civitaiStatus,
+    queryFn: async () => {
+      try {
+        return await unwrap(api.GET('/api/v1/civitai/status'))
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 404) return null
+        throw e
+      }
+    },
+    staleTime: 10 * 60_000,
+    retry: false,
   })
 }

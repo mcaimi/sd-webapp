@@ -59,6 +59,8 @@ export function SystemPage() {
   const host = data.host_stats as unknown as HostStats
   const queue = data.queue_stats as unknown as QueueStats
   const cache = data.cache_stats as unknown as CacheStats
+  const gpuLane = queue.lanes?.gpu
+  const ioLane = queue.lanes?.io
   const gpuPercent = gpu.total_bytes ? ((gpu.used_bytes ?? 0) / gpu.total_bytes) * 100 : 0
 
   return (
@@ -77,16 +79,29 @@ export function SystemPage() {
           <motion.div variants={rise}>
             <StatTile
               label="Queue"
-              value={`${queue.queue_size} queued`}
-              detail={`${queue.total_jobs} jobs since start`}
+              value={`${gpuLane?.queue_size ?? queue.queue_size} queued`}
+              detail={[
+                ioLane && `${ioLane.queue_size + ioLane.running_jobs} downloads`,
+                `${queue.total_jobs} jobs since start`,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
               icon={ListOrdered}
             />
           </motion.div>
           <motion.div variants={rise}>
             <StatTile
               label="Workers"
-              value={String(queue.num_workers)}
-              detail={queue.workers_running ? 'Running' : 'Stopped'}
+              value={gpuLane ? `${gpuLane.running_jobs} / ${gpuLane.num_workers} busy` : String(queue.num_workers)}
+              detail={
+                [
+                  !queue.workers_running && 'Stopped',
+                  gpuLane && `GPU ${gpuLane.num_workers}`,
+                  ioLane && `I/O ${ioLane.num_workers}`,
+                ]
+                  .filter(Boolean)
+                  .join(' · ') || 'Running'
+              }
               icon={Workflow}
             />
           </motion.div>
@@ -94,7 +109,13 @@ export function SystemPage() {
             <StatTile
               label="Model cache"
               value={`${cache.cached_models} / ${cache.max_models}`}
-              detail={cache.cache_keys.length ? cache.cache_keys.join(', ') : 'No models loaded'}
+              detail={
+                cache.cache_keys.length
+                  ? [cache.in_use ? `${cache.in_use} in use` : undefined, cache.cache_keys.join(', ')]
+                      .filter(Boolean)
+                      .join(' · ')
+                  : 'No models loaded'
+              }
               icon={Boxes}
             />
           </motion.div>

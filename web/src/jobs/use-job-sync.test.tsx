@@ -15,6 +15,10 @@ type RemoteJob = {
   created_at: string
   started_at?: string | null
   error?: string | null
+  lane?: string
+  cancellable?: boolean
+  progress?: number
+  detail?: Record<string, unknown> | null
 }
 let remote: RemoteJob[] = []
 
@@ -77,6 +81,32 @@ describe('useJobSync', () => {
     expect(store.getAll().find((j) => j.id === 'a')?.status).toBe('running')
   })
 
+  it("counts queue positions within the job's lane and tracks progress", async () => {
+    remote = [
+      { job_id: 'dl-running', status: 'running', created_at: '2026-01-01T00:00:00', lane: 'io', cancellable: true },
+      { job_id: 'dl-queued', status: 'queued', created_at: '2026-01-01T00:00:01', lane: 'io', cancellable: true },
+      { job_id: 'gen', status: 'queued', created_at: '2026-01-01T00:00:02', lane: 'gpu' },
+      {
+        job_id: 'mine',
+        status: 'running',
+        created_at: '2026-01-01T00:00:03',
+        lane: 'io',
+        cancellable: true,
+        progress: 0.25,
+        detail: { phase: 'downloading', bytes_done: 25, bytes_total: 100 },
+      },
+    ]
+    const store = await setup([tracked('gen'), tracked('mine', { groupId: 'group-2' })])
+    await waitFor(() => expect(store.getAll().find((j) => j.id === 'gen')?.queuePosition).toBe(1))
+    expect(store.getAll().find((j) => j.id === 'mine')).toMatchObject({
+      status: 'running',
+      lane: 'io',
+      cancellable: true,
+      progress: 0.25,
+      detail: { phase: 'downloading', bytes_done: 25, bytes_total: 100 },
+    })
+  })
+
   it('announces a submission once, when all of its jobs are done', async () => {
     remote = [
       { job_id: 'a', status: 'completed', created_at: '2026-01-01T00:00:00' },
@@ -87,6 +117,16 @@ describe('useJobSync', () => {
     expect(toast.error).toHaveBeenCalledWith('Job failed', { description: 'OOM' })
     expect(toast.success).toHaveBeenCalledTimes(1)
     expect(toast.success.mock.calls[0][0]).toBe('Image ready')
+  })
+
+  it('announces finished downloads by file name', async () => {
+    remote = [{ job_id: 'dl', status: 'completed', created_at: '2026-01-01T00:00:00', lane: 'io', cancellable: true }]
+    const store = await setup([tracked('dl', { kind: 'download', family: 'sd15', label: 'DreamShaper_8.safetensors' })])
+    await waitFor(() => expect(store.getAll()[0].status).toBe('completed'))
+    expect(toast.success).toHaveBeenCalledWith(
+      'Downloaded DreamShaper_8.safetensors',
+      expect.objectContaining({ description: undefined }),
+    )
   })
 
   it('expires jobs the backend no longer knows, but not freshly submitted ones', async () => {

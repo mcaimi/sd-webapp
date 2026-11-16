@@ -15,6 +15,7 @@ export const router = createBrowserRouter([
       { path: 'generate/:family', lazy: () => import('@/features/generate/route') },
       { path: 'inpaint/:family', lazy: () => import('@/features/inpaint/route') },
       { path: 'merge/:family', lazy: () => import('@/features/merge/route') },
+      { path: 'models/:family', lazy: () => import('@/features/models/route') },
       { path: 'gallery', lazy: () => import('@/features/gallery/route') },
       { path: 'system', lazy: () => import('@/features/system/route') },
       { path: '*', element: <NotFoundPage /> },

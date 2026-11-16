@@ -1,6 +1,6 @@
 import { expect, expectAccessible, test, waitForJobsToSettle } from './fixtures'
 
-const PAGES = ['/generate/sdxl', '/inpaint/sdxl', '/merge/sdxl', '/gallery', '/system']
+const PAGES = ['/generate/sdxl', '/inpaint/sdxl', '/merge/sdxl', '/models/sd15', '/gallery', '/system']
 
 for (const theme of ['dark', 'light'] as const) {
   test.describe(`${theme} theme`, () => {
@@ -36,4 +36,17 @@ test('lightbox and jobs panel are accessible', async ({ page }) => {
   await page.getByRole('button', { name: /^Jobs \(/ }).click()
   await page.waitForTimeout(400)
   await expectAccessible(page, 'jobs panel')
+})
+
+test('Civitai browser and model sheet are accessible', async ({ page }) => {
+  await page.goto('/models/sd15')
+  await page.getByRole('tab', { name: 'Browse Civitai' }).click()
+  await expect(page.getByRole('list', { name: 'Civitai models' }).getByRole('listitem').first()).toBeVisible()
+  await page.waitForTimeout(800)
+  await expectAccessible(page, 'Civitai browser')
+
+  await page.getByRole('list', { name: 'Civitai models' }).getByRole('button').first().click()
+  await expect(page.getByRole('dialog').getByRole('heading', { name: 'Files' })).toBeVisible()
+  await page.waitForTimeout(600)
+  await expectAccessible(page, 'Civitai model sheet')
 })

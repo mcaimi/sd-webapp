@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Copy, Download, Expand, Images, Loader2, Shuffle, Trash2 } from 'lucide-react'
+import { Copy, Download, Expand, Images, Shuffle, Trash2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 
 import type { OutputItem } from '@/api/schema'
 import { DetailList, Lightbox, type LightboxItem } from '@/components/lightbox'
+import { LoadMore } from '@/components/load-more'
 import { PageHeader } from '@/components/page-header'
 import { QueryError } from '@/components/query-error'
 import { Button } from '@/components/ui/button'
@@ -252,36 +253,6 @@ function TileAction({ label, onClick, children }: { label: string; onClick: () =
 }
 
 /** Infinite scroll via a sentinel, with a button for when the observer can't fire. */
-function LoadMore({
-  hasNextPage,
-  isFetching,
-  onLoadMore,
-}: {
-  hasNextPage: boolean
-  isFetching: boolean
-  onLoadMore: () => void
-}) {
-  const sentinel = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const el = sentinel.current
-    if (!el || !hasNextPage) return
-    const observer = new IntersectionObserver(([entry]) => entry.isIntersecting && !isFetching && onLoadMore(), {
-      rootMargin: '400px',
-    })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [hasNextPage, isFetching, onLoadMore])
-
-  if (!hasNextPage) return null
-  return (
-    <div ref={sentinel} className="flex justify-center py-6">
-      <Button variant="outline" onClick={onLoadMore} disabled={isFetching}>
-        {isFetching && <Loader2 className="animate-spin" />}
-        {isFetching ? 'Loading…' : 'Load more'}
-      </Button>
-    </div>
-  )
-}
 
 function toLightboxItem(item: OutputItem, meta: OutputMetadata | undefined, actions: OutputActions): LightboxItem {
   const instance = meta?.generation?.instances?.[0]

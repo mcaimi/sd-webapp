@@ -2,7 +2,7 @@ import { queryOptions, useQuery } from '@tanstack/react-query'
 
 import { api, ApiError, unwrap } from '@/api/client'
 import { queryClient } from '@/api/query-client'
-import type { BatchMergeResult, GenerationInstance, GenerationResult, MergeResult } from '@/api/types'
+import type { BatchMergeResult, DownloadResult, GenerationInstance, GenerationResult, MergeResult } from '@/api/types'
 
 import { jobStore, type TrackedJob } from './job-store'
 
@@ -19,7 +19,12 @@ export interface MergeJobResult {
   result: MergeResult | BatchMergeResult
 }
 
-export type JobResult = ImageJobResult | MergeJobResult
+export interface DownloadJobResult {
+  type: 'download'
+  result: DownloadResult
+}
+
+export type JobResult = ImageJobResult | MergeJobResult | DownloadJobResult
 
 const resultKey = (jobId: string) => ['job-result', jobId] as const
 
@@ -35,6 +40,7 @@ async function fetchResult(job: TrackedJob): Promise<JobResult> {
     if (job.kind === 'merge' || job.kind === 'batch-merge' || job.kind === 'recipe-merge') {
       return { type: 'merge', result: result as MergeResult | BatchMergeResult }
     }
+    if (job.kind === 'download') return { type: 'download', result: result as DownloadResult }
     const generation = result as GenerationResult
     return {
       type: 'image',

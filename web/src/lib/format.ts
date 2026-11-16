@@ -9,6 +9,11 @@ export function formatBytes(bytes: number, fractionDigits = 1): string {
   return `${value.toFixed(digits).replace(/\.0+$/, '')} ${BYTE_UNITS[exponent]}`
 }
 
+/** 1234 -> "1.2K", 2_500_000 -> "2.5M" */
+export function formatCount(value: number): string {
+  return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
+}
+
 export function formatPercent(value: number): string {
   return `${Math.round(value)}%`
 }

@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { useModels } from '@/api/queries'
 import { PromptField } from '@/components/form/prompt-field'
 import { ImageResults } from '@/components/jobs/image-results'
+import { ParamsResizeHandle } from '@/components/params-resize-handle'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Kbd } from '@/components/ui/kbd'
@@ -19,6 +20,7 @@ import { useDraft } from '@/lib/drafts'
 import { FAMILIES, type FamilyId } from '@/lib/families'
 import { paramsFromRequest } from '@/lib/generation'
 import { patchGenerationDraft, useGenerationDraft } from '@/lib/generation-draft'
+import { PARAMS_GRID, useParamsGridStyle } from '@/lib/layout'
 import { MOD_KEY } from '@/lib/platform'
 import { modelDisplayName } from '@/lib/models'
 
@@ -68,6 +70,7 @@ export function GeneratePage({ family }: { family: FamilyId }) {
     toast.success('Settings loaded into the form')
   }
 
+  const paramsGridStyle = useParamsGridStyle()
   const showNegative = info.negativePrompt || params.trueCfgScale > 1
   const submitLabel =
     ui.mode === 'compare'
@@ -95,7 +98,7 @@ export function GeneratePage({ family }: { family: FamilyId }) {
   )
 
   return (
-    <div className="grid flex-1 gap-6 pb-24 lg:grid-cols-[minmax(20rem,24rem)_1fr] lg:pb-0">
+    <div className={`grid flex-1 gap-6 pb-24 lg:gap-x-2 lg:pb-0 ${PARAMS_GRID}`} style={paramsGridStyle}>
       <aside className="space-y-5 lg:sticky lg:top-20 lg:max-h-[calc(100svh-6.5rem)] lg:self-start lg:overflow-y-auto lg:pr-2">
         {/* A mode switch rather than tabs: both modes share the same form below. */}
         <ToggleGroup
@@ -154,6 +157,8 @@ export function GeneratePage({ family }: { family: FamilyId }) {
           </p>
         </div>
       </aside>
+
+      <ParamsResizeHandle />
 
       <section aria-label="Results" className="min-w-0">
         <ImageResults jobs={jobs} onUseSettings={useSettings} emptyState={<EmptyResults family={family} />} />

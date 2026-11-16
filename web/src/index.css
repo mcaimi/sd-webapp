@@ -141,6 +141,15 @@
   transition: none !important;
 }
 
+/* Set while a column resize handle is being dragged. */
+body[data-resizing] {
+  cursor: col-resize;
+  user-select: none;
+}
+body[data-resizing] * {
+  transition: none !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

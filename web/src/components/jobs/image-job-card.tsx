@@ -1,4 +1,4 @@
-import { Copy, Download, Expand, RotateCw, SlidersHorizontal, Trash2, X } from 'lucide-react'
+import { Copy, Download, Expand, RotateCw, SlidersHorizontal, Trash2 } from 'lucide-react'
 import { motion } from 'motion/react'
 import { toast } from 'sonner'
 
@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useJobResult } from '@/jobs/job-results'
 import { isActive, jobStore, type TrackedJob } from '@/jobs/job-store'
-import { cancelJob, retryJob } from '@/jobs/submit'
+import { retryJob } from '@/jobs/submit'
 import { download } from '@/lib/download'
 import { cn } from '@/lib/utils'
 
-import { IndeterminateBar, JobStatus } from './job-status'
+import { CancelJobButton } from './cancel-job-button'
+import { JobProgressBar, JobStatus } from './job-status'
 import { RevealImage } from './reveal-image'
 
 interface ImageJobCardProps {
@@ -85,18 +86,8 @@ export function ImageJobCard({ job, layoutId, onOpen, onUseSettings, showModel }
           {showModel && job.model && (
             <span className="max-w-full truncate text-xs">{job.model.replace(/\.safetensors$/, '')}</span>
           )}
-          {job.status === 'queued' && (
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={() => run(() => cancelJob(job.id), 'Could not cancel job')}
-              className="mt-1"
-            >
-              <X />
-              Cancel
-            </Button>
-          )}
-          {job.status === 'running' && <IndeterminateBar className="absolute inset-x-0 bottom-0" />}
+          {isActive(job) && <CancelJobButton job={job} className="mt-1" />}
+          {job.status === 'running' && <JobProgressBar job={job} className="absolute inset-x-0 bottom-0" />}
         </div>
       ) : (
         <div className="flex size-full flex-col items-center justify-center gap-2 p-4 text-center">
