@@ -1,7 +1,7 @@
 import type { GenerationInstance } from '@/api/types'
 
-import type { FamilyId } from './families'
-import { FAMILIES } from './families'
+import type { FamilyId, VariantId } from './families'
+import { FAMILIES, variantForBaseModel } from './families'
 
 /** Form-level generation parameters, shared by the generate and inpaint tools. */
 export interface GenerationParams {
@@ -18,6 +18,8 @@ export interface GenerationParams {
   /** Flux only. */
   trueCfgScale: number
   scheduler: string
+  /** Checkpoint variant, for families that have them (Z-Image). */
+  variant: VariantId
   /** Seed used when `seedLocked`; otherwise each image gets a random seed. */
   seed: number
   seedLocked: boolean
@@ -30,7 +32,7 @@ export const MAX_BATCH = 8
 export const SEED_MAX = 2 ** 32 - 1
 
 export function defaultParams(family: FamilyId): GenerationParams {
-  const { defaults, trueCfgScale } = FAMILIES[family]
+  const { defaults, trueCfgScale, variants } = FAMILIES[family]
   return {
     prompt: '',
     negativePrompt: '',
@@ -43,10 +45,30 @@ export function defaultParams(family: FamilyId): GenerationParams {
     cfgScale: defaults.cfgScale,
     trueCfgScale: trueCfgScale?.default ?? 1,
     scheduler: defaults.scheduler,
+    variant: variants?.[0].id ?? 'turbo',
     seed: randomSeed(),
     seedLocked: false,
     count: 1,
   }
+}
+
+/** Select a variant along with its sampling defaults. */
+export function variantPatch(family: FamilyId, variant: VariantId): Partial<GenerationParams> {
+  const v = FAMILIES[family].variants?.find((x) => x.id === variant)
+  return v ? { variant, steps: v.steps, cfgScale: v.cfgScale } : {}
+}
+
+/**
+ * Select a checkpoint. When its Civitai base model identifies a variant other
+ * than the current one, that variant and its sampling defaults come along.
+ */
+export function modelPatch(
+  family: FamilyId,
+  model: { name: string; civitai?: { base_model?: string | null } | null },
+  current: Pick<GenerationParams, 'variant'>,
+): Partial<GenerationParams> {
+  const variant = variantForBaseModel(family, model.civitai?.base_model)
+  return { model: model.name, ...(variant && variant !== current.variant ? variantPatch(family, variant) : {}) }
 }
 
 export function randomSeed(): number {
@@ -75,7 +97,8 @@ export function toApiParams(family: FamilyId, params: GenerationParams, seed: nu
     scheduler: params.scheduler,
     loras: params.loras.length ? params.loras : null,
     custom_vae: params.vae || null,
-    ...(family === 'flux' ? { true_cfg_scale: params.trueCfgScale } : {}),
+    ...(FAMILIES[family].trueCfgScale ? { true_cfg_scale: params.trueCfgScale } : {}),
+    ...(FAMILIES[family].variants ? { variant: params.variant } : {}),
   }
 }
 
@@ -122,6 +145,7 @@ interface ApiGenerationFields {
   scheduler?: string
   loras?: { name: string; strength: number }[] | null
   custom_vae?: string | null
+  variant?: VariantId
 }
 
 /** Rebuild form params from a submitted request, to re-run or tweak a past job. */
@@ -139,6 +163,7 @@ export function paramsFromRequest(request: Record<string, unknown>): Partial<Gen
     scheduler: r.scheduler,
     loras: r.loras ?? [],
     vae: r.custom_vae ?? '',
+    variant: r.variant,
   }
   if (r.seed !== undefined && r.seed >= 0) Object.assign(params, { seed: r.seed, seedLocked: true })
   return Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined))

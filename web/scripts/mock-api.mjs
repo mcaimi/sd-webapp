@@ -17,8 +17,8 @@ import http from 'node:http'
 import { deflateSync } from 'node:zlib'
 
 const SPEED = Number(process.env.MOCK_SPEED ?? 1)
-const FAMILIES = ['sd15', 'sdxl', 'illustrious', 'flux']
-const MS_PER_STEP = { sd15: 60, sdxl: 110, illustrious: 110, flux: 180 }
+const FAMILIES = ['sd15', 'sdxl', 'illustrious', 'flux', 'zimage']
+const MS_PER_STEP = { sd15: 60, sdxl: 110, illustrious: 110, flux: 180, zimage: 150 }
 const SD_SCHEDULERS = ['DPM++ 2M', 'DPM++ SDE', 'DPM2', 'Euler a', 'Euler', 'Heun', 'LMS']
 const FLOW_SCHEDULERS = ['FlowMatch Euler']
 const OUTPUT_DTYPES = ['auto', 'bfloat16', 'float16', 'float32']
@@ -43,6 +43,11 @@ const models = {
     checkpoints: ['flux1-dev.safetensors', 'flux1-schnell.safetensors'],
     loras: ['flux_realism.safetensors'],
     vaes: ['ae.safetensors'],
+  },
+  zimage: {
+    checkpoints: ['z_image_turbo_bf16.safetensors', 'z_image_base.safetensors'],
+    loras: ['zimage_film.safetensors'],
+    vaes: [],
   },
 }
 
@@ -77,6 +82,16 @@ const civitai = {
     trained_words: [],
     nsfw: true,
     url: 'https://civitai.com/models/4201?modelVersionId=245598',
+  },
+  'z_image_base.safetensors': {
+    model_id: 5301,
+    version_id: 530101,
+    model_name: 'Z-Image',
+    version_name: 'Base',
+    base_model: 'ZImageBase',
+    trained_words: [],
+    nsfw: false,
+    url: 'https://civitai.com/models/5301?modelVersionId=530101',
   },
 }
 // Flux checkpoints: which components each file bundles.
@@ -353,6 +368,7 @@ route('GET', '/api/v1/civitai/status', (_req, res) =>
       sdxl: ['SDXL 1.0', 'Pony'],
       illustrious: ['Illustrious', 'NoobAI'],
       flux: ['Flux.1 D', 'Flux.1 S'],
+      zimage: ['ZImageTurbo', 'ZImageBase'],
     },
     resource_types: { checkpoints: ['Checkpoint'], loras: ['LORA', 'LoCon', 'DoRA'], vaes: ['VAE'] },
     sort_options: ['Highest Rated', 'Most Downloaded', 'Newest'],
@@ -362,7 +378,7 @@ route('GET', '/api/v1/civitai/status', (_req, res) =>
 route('GET', '/api/v1/info/schedulers', (req, res) => {
   const family = query(req).get('model_type')
   if (family && !FAMILIES.includes(family)) return send(res, 400, { detail: 'Invalid model_type' })
-  send(res, 200, family === 'flux' ? FLOW_SCHEDULERS : SD_SCHEDULERS)
+  send(res, 200, family === 'flux' || family === 'zimage' ? FLOW_SCHEDULERS : SD_SCHEDULERS)
 })
 
 route('GET', '/api/v1/models/:family/:resource', (_req, res, { family, resource }) => {
@@ -556,6 +572,7 @@ const CIVITAI_BASE_MODELS = {
   sdxl: ['SDXL 1.0', 'Pony'],
   illustrious: ['Illustrious'],
   flux: ['Flux.1 D', 'Flux.1 S'],
+  zimage: ['ZImageTurbo', 'ZImageBase'],
 }
 const CIVITAI_TYPES = { checkpoints: 'Checkpoint', loras: 'LORA', vaes: 'VAE' }
 const CATALOGUE_SIZE = 30

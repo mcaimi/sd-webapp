@@ -4,11 +4,13 @@ import {
   appendToPrompt,
   defaultParams,
   estimateTokens,
+  modelPatch,
   paramsFromOutputMetadata,
   paramsFromRequest,
   SEED_MAX,
   seedsFor,
   toApiParams,
+  variantPatch,
 } from './generation'
 
 describe('seedsFor', () => {
@@ -45,6 +47,31 @@ describe('toApiParams', () => {
   it('only sends true_cfg_scale for Flux', () => {
     expect(toApiParams('flux', { ...params, trueCfgScale: 2 }, 1)).toMatchObject({ true_cfg_scale: 2 })
     expect(toApiParams('sdxl', params, 1)).not.toHaveProperty('true_cfg_scale')
+  })
+
+  it('only sends variant for Z-Image', () => {
+    expect(toApiParams('zimage', { ...defaultParams('zimage'), variant: 'base' }, 1)).toMatchObject({ variant: 'base' })
+    expect(toApiParams('flux', params, 1)).not.toHaveProperty('variant')
+  })
+})
+
+describe('variants', () => {
+  it('applies the variant sampling defaults', () => {
+    expect(variantPatch('zimage', 'base')).toEqual({ variant: 'base', steps: 28, cfgScale: 4 })
+    expect(variantPatch('sdxl', 'base')).toEqual({})
+  })
+
+  it('picks the variant from the checkpoint Civitai base model', () => {
+    const current = defaultParams('zimage')
+    expect(modelPatch('zimage', { name: 'b', civitai: { base_model: 'ZImageBase' } }, current)).toEqual({
+      model: 'b',
+      variant: 'base',
+      steps: 28,
+      cfgScale: 4,
+    })
+    // Same variant or unknown base model: sampling settings are left alone.
+    expect(modelPatch('zimage', { name: 't', civitai: { base_model: 'ZImageTurbo' } }, current)).toEqual({ model: 't' })
+    expect(modelPatch('zimage', { name: 'x' }, current)).toEqual({ model: 'x' })
   })
 })
 

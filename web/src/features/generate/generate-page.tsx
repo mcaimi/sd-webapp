@@ -17,8 +17,8 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useTrackedJobs, type TrackedJob } from '@/jobs/job-store'
 import { submitCompare, submitGenerate } from '@/jobs/submit'
 import { useDraft } from '@/lib/drafts'
-import { FAMILIES, type FamilyId } from '@/lib/families'
-import { paramsFromRequest } from '@/lib/generation'
+import { FAMILIES, negativePromptActive, negativePromptNote, type FamilyId } from '@/lib/families'
+import { modelPatch, paramsFromRequest } from '@/lib/generation'
 import { patchGenerationDraft, useGenerationDraft } from '@/lib/generation-draft'
 import { PARAMS_GRID, useParamsGridStyle } from '@/lib/layout'
 import { MOD_KEY } from '@/lib/platform'
@@ -41,9 +41,9 @@ export function GeneratePage({ family }: { family: FamilyId }) {
   // Default to the first checkpoint, and recover if the saved one disappeared.
   useEffect(() => {
     if (checkpoints?.length && !checkpoints.some((m) => m.name === params.model)) {
-      setParams({ model: checkpoints[0].name })
+      setParams(modelPatch(family, checkpoints[0], params))
     }
-  }, [checkpoints, params.model, setParams])
+  }, [checkpoints, family, params, setParams])
 
   const submit = useMutation({
     mutationFn: () =>
@@ -71,7 +71,7 @@ export function GeneratePage({ family }: { family: FamilyId }) {
   }
 
   const paramsGridStyle = useParamsGridStyle()
-  const showNegative = info.negativePrompt || params.trueCfgScale > 1
+  const showNegative = negativePromptActive(family, params)
   const submitLabel =
     ui.mode === 'compare'
       ? `Compare ${ui.compareModels.length || ''} models`.replace('  ', ' ')
@@ -135,9 +135,7 @@ export function GeneratePage({ family }: { family: FamilyId }) {
             onSubmit={trySubmit}
           />
         ) : (
-          <p className="text-xs text-muted-foreground">
-            {info.shortLabel} ignores negative prompts unless True CFG is above 1.
-          </p>
+          <p className="text-xs text-muted-foreground">{negativePromptNote(family)}</p>
         )}
 
         {ui.mode === 'compare' && (

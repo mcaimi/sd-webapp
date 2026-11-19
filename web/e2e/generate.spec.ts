@@ -117,3 +117,28 @@ test('adds a LoRA and inserts its Civitai trigger words into the prompt', async 
   await page.getByRole('button', { name: 'All' }).click()
   await expect(prompt).toHaveValue('a harbour, wcstyle, watercolor painting')
 })
+
+test('Z-Image picks the variant from the checkpoint and sends it', async ({ page }) => {
+  await page.goto('/generate/zimage')
+  const variant = (name: string) => page.getByRole('radio', { name })
+  await expect(variant('Turbo')).toBeChecked()
+  await expect(page.getByText('Z-Image ignores negative prompts unless CFG is above 0.')).toBeVisible()
+
+  // The base checkpoint's Civitai sidecar says ZImageBase: variant and its defaults follow.
+  await page.getByRole('combobox', { name: 'Checkpoint' }).click()
+  await page.getByRole('option', { name: /z_image_base|Z-Image/ }).click()
+  await expect(variant('Base')).toBeChecked()
+  await expect(page.getByRole('slider', { name: 'Steps' })).toHaveAttribute('aria-valuenow', '28')
+  await expect(page.getByLabel('Negative prompt')).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Scheduler' })).toHaveText('FlowMatch Euler')
+
+  await page.getByLabel('Prompt', { exact: true }).fill('a paper boat')
+  await page.getByRole('button', { name: /^Generate$/ }).click()
+  await waitForJobsToSettle(page)
+  const requests = await page.evaluate(() =>
+    (JSON.parse(localStorage.getItem('sd-webapp.jobs')!) as { request: Record<string, unknown> }[]).map(
+      (j) => j.request,
+    ),
+  )
+  expect(requests[0]).toMatchObject({ variant: 'base', steps: 28, cfg_scale: 4, scheduler: 'FlowMatch Euler' })
+})

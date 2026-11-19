@@ -1,6 +1,14 @@
 import { expect, expectAccessible, test, waitForJobsToSettle } from './fixtures'
 
-const PAGES = ['/generate/sdxl', '/inpaint/sdxl', '/merge/sdxl', '/models/sd15', '/gallery', '/system']
+const PAGES = [
+  '/generate/sdxl',
+  '/generate/zimage',
+  '/inpaint/sdxl',
+  '/merge/sdxl',
+  '/models/sd15',
+  '/gallery',
+  '/system',
+]
 
 for (const theme of ['dark', 'light'] as const) {
   test.describe(`${theme} theme`, () => {
