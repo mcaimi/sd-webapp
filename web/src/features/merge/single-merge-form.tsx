@@ -7,11 +7,11 @@ import { useModels } from '@/api/queries'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { submitMerge } from '@/jobs/submit'
+import { submitMerge, type OutputDtype } from '@/jobs/submit'
 import { useDraft } from '@/lib/drafts'
 import type { FamilyId } from '@/lib/families'
 
-import { AlphaField, MethodPicker, ModelField, OutputNameField, SubmitRow } from './merge-controls'
+import { AlphaField, MethodPicker, ModelField, OutputDtypeField, OutputNameField, SubmitRow } from './merge-controls'
 import { useOverwriteConfirm, useWouldOverwrite } from './merge-hooks'
 import { ensureSafetensors, suggestOutputName, type MergeMethod } from './merge-utils'
 
@@ -22,6 +22,7 @@ interface SingleDraft {
   alpha: number
   /** Empty while the user hasn't typed a name: the suggestion follows the inputs. */
   customName: string
+  outputDtype: OutputDtype
   preserveMetadata: boolean
 }
 
@@ -32,6 +33,7 @@ export function SingleMergeForm({ family }: { family: FamilyId }) {
     method: 'linear',
     alpha: 0.5,
     customName: '',
+    outputDtype: 'auto',
     preserveMetadata: true,
   }))
   const { data: checkpoints } = useModels(family, 'checkpoints')
@@ -57,6 +59,7 @@ export function SingleMergeForm({ family }: { family: FamilyId }) {
         method: draft.method,
         alpha: draft.alpha,
         outputName: ensureSafetensors(outputName),
+        outputDtype: draft.outputDtype,
         preserveMetadata: draft.preserveMetadata,
       }),
     onSuccess: () => toast.success('Merge queued', { description: ensureSafetensors(outputName) }),
@@ -96,6 +99,7 @@ export function SingleMergeForm({ family }: { family: FamilyId }) {
           </Button>
         )}
       </div>
+      <OutputDtypeField value={draft.outputDtype} onChange={(outputDtype) => setDraft({ outputDtype })} />
       <div className="flex items-center gap-2">
         <Switch
           id="single-preserve"

@@ -6,7 +6,9 @@ import { ModelMetadataButton } from '@/components/pickers/model-metadata'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
+import type { OutputDtype } from '@/jobs/submit'
 import type { FamilyId } from '@/lib/families'
 import { cn } from '@/lib/utils'
 
@@ -169,6 +171,38 @@ export function OutputNameField({
           overwritten.
         </p>
       )}
+    </div>
+  )
+}
+
+const OUTPUT_DTYPES: { id: OutputDtype; label: string }[] = [
+  { id: 'auto', label: 'Auto (same as base)' },
+  { id: 'float16', label: 'FP16' },
+  { id: 'bfloat16', label: 'BF16' },
+  { id: 'float32', label: 'FP32' },
+]
+
+/** Precision of the merged checkpoint. */
+export function OutputDtypeField({ value, onChange }: { value: OutputDtype; onChange: (dtype: OutputDtype) => void }) {
+  const id = useId()
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>Precision</Label>
+      <Select value={value} onValueChange={(dtype) => onChange(dtype as OutputDtype)}>
+        <SelectTrigger id={id} className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {OUTPUT_DTYPES.map((d) => (
+            <SelectItem key={d.id} value={d.id}>
+              {d.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <p className="text-xs text-muted-foreground">
+        Auto keeps each tensor's dtype from the base model. FP16 and BF16 halve the size of FP32 checkpoints.
+      </p>
     </div>
   )
 }

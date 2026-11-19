@@ -16,8 +16,8 @@ import { GenerationSettings } from '@/features/generate/generation-settings'
 import { useTrackedJobs, type TrackedJob } from '@/jobs/job-store'
 import { submitInpaint } from '@/jobs/submit'
 import { useDraft } from '@/lib/drafts'
-import { FAMILIES, type FamilyId } from '@/lib/families'
-import { paramsFromRequest } from '@/lib/generation'
+import { FAMILIES, negativePromptActive, negativePromptNote, type FamilyId } from '@/lib/families'
+import { modelPatch, paramsFromRequest } from '@/lib/generation'
 import { patchGenerationDraft, useGenerationDraft } from '@/lib/generation-draft'
 import { PARAMS_GRID, useParamsGridStyle } from '@/lib/layout'
 import { MOD_KEY } from '@/lib/platform'
@@ -31,7 +31,7 @@ import { jobSources, workspaces, type SourceImage } from './source-images'
 export function InpaintPage({ family }: { family: FamilyId }) {
   const info = FAMILIES[family]
   const [params, setParams] = useGenerationDraft('inpaint', family)
-  const [ui, setUi] = useDraft(`inpaint-ui:${family}`, () => ({ strength: 0.85 }))
+  const [ui, setUi] = useDraft(`inpaint-ui:${family}`, () => ({ strength: info.inpaintStrength?.default ?? 1 }))
   const { data: checkpoints } = useModels(family, 'checkpoints')
 
   const [image, setImageState] = useState<SourceImage | undefined>(() => workspaces.get(family)?.image)
@@ -55,14 +55,14 @@ export function InpaintPage({ family }: { family: FamilyId }) {
 
   useEffect(() => {
     if (checkpoints?.length && !checkpoints.some((m) => m.name === params.model)) {
-      setParams({ model: checkpoints[0].name })
+      setParams(modelPatch(family, checkpoints[0], params))
     }
-  }, [checkpoints, params.model, setParams])
+  }, [checkpoints, family, params, setParams])
 
   const submit = useMutation({
     mutationFn: async () => {
       const mask = editorRef.current!.exportMask()
-      const jobId = await submitInpaint(family, params, image!, mask, family === 'flux' ? ui.strength : undefined)
+      const jobId = await submitInpaint(family, params, image!, mask, info.inpaintStrength ? ui.strength : undefined)
       jobSources.set(jobId, image!.url)
       return jobId
     },
@@ -91,7 +91,7 @@ export function InpaintPage({ family }: { family: FamilyId }) {
   }
 
   const paramsGridStyle = useParamsGridStyle()
-  const showNegative = info.negativePrompt || params.trueCfgScale > 1
+  const showNegative = negativePromptActive(family, params)
   const settings = (
     <GenerationSettings
       family={family}
@@ -100,7 +100,7 @@ export function InpaintPage({ family }: { family: FamilyId }) {
       showSize={false}
       showBatch={false}
       extraSampling={
-        family === 'flux' && (
+        info.inpaintStrength && (
           <SliderField
             label="Strength"
             value={ui.strength}
@@ -149,9 +149,7 @@ export function InpaintPage({ family }: { family: FamilyId }) {
             onSubmit={trySubmit}
           />
         ) : (
-          <p className="text-xs text-muted-foreground">
-            {info.shortLabel} ignores negative prompts unless True CFG is above 1.
-          </p>
+          <p className="text-xs text-muted-foreground">{negativePromptNote(family)}</p>
         )}
 
         <div className="hidden lg:block">{settings}</div>

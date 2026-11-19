@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Stable Diffusion API",
-    "description": "REST API for SD1.5, SDXL, Illustrious XL, and Flux image generation, inpainting, and model merging",
+    "description": "REST API for SD1.5, SDXL, Illustrious XL, Flux, and Z-Image image generation, inpainting, and model merging",
     "version": "1.0.0"
   },
   "paths": {
@@ -11,8 +11,7 @@
         "tags": [
           "SD1.5"
         ],
-        "summary": "Generate Sd15",
-        "description": "Generate an SD1.5 image (async job).",
+        "summary": "Generate a SD1.5 image (async job)",
         "operationId": "generate_sd15_api_v1_sd15_generate_post",
         "requestBody": {
           "content": {
@@ -53,8 +52,7 @@
         "tags": [
           "SD1.5"
         ],
-        "summary": "Inpaint Sd15",
-        "description": "SD1.5 inpainting (async job).",
+        "summary": "SD1.5 inpainting (async job)",
         "operationId": "inpaint_sd15_api_v1_sd15_inpaint_post",
         "requestBody": {
           "content": {
@@ -95,8 +93,7 @@
         "tags": [
           "SD1.5"
         ],
-        "summary": "Batch Generate Sd15",
-        "description": "Generate multiple SD1.5 images.",
+        "summary": "Generate multiple SD1.5 images",
         "operationId": "batch_generate_sd15_api_v1_sd15_generate_batch_post",
         "requestBody": {
           "content": {
@@ -135,8 +132,7 @@
         "tags": [
           "SD1.5"
         ],
-        "summary": "Compare Models Sd15",
-        "description": "Generate images from multiple SD1.5 models for comparison.",
+        "summary": "Generate images from multiple SD1.5 models for comparison",
         "operationId": "compare_models_sd15_api_v1_sd15_generate_compare_post",
         "requestBody": {
           "content": {
@@ -175,8 +171,7 @@
         "tags": [
           "SDXL"
         ],
-        "summary": "Generate Sdxl",
-        "description": "Generate an SDXL image (async job).",
+        "summary": "Generate a SDXL image (async job)",
         "operationId": "generate_sdxl_api_v1_sdxl_generate_post",
         "requestBody": {
           "content": {
@@ -217,8 +212,7 @@
         "tags": [
           "SDXL"
         ],
-        "summary": "Inpaint Sdxl",
-        "description": "SDXL inpainting (async job).",
+        "summary": "SDXL inpainting (async job)",
         "operationId": "inpaint_sdxl_api_v1_sdxl_inpaint_post",
         "requestBody": {
           "content": {
@@ -259,8 +253,7 @@
         "tags": [
           "SDXL"
         ],
-        "summary": "Batch Generate Sdxl",
-        "description": "Generate multiple SDXL images.",
+        "summary": "Generate multiple SDXL images",
         "operationId": "batch_generate_sdxl_api_v1_sdxl_generate_batch_post",
         "requestBody": {
           "content": {
@@ -299,8 +292,7 @@
         "tags": [
           "SDXL"
         ],
-        "summary": "Compare Models Sdxl",
-        "description": "Generate images from multiple SDXL models for comparison.",
+        "summary": "Generate images from multiple SDXL models for comparison",
         "operationId": "compare_models_sdxl_api_v1_sdxl_generate_compare_post",
         "requestBody": {
           "content": {
@@ -337,10 +329,9 @@
     "/api/v1/illustrious/generate": {
       "post": {
         "tags": [
-          "Illustrious"
+          "Illustrious XL"
         ],
-        "summary": "Generate Illustrious",
-        "description": "Generate an Illustrious XL image (async job).",
+        "summary": "Generate a Illustrious XL image (async job)",
         "operationId": "generate_illustrious_api_v1_illustrious_generate_post",
         "requestBody": {
           "content": {
@@ -379,10 +370,9 @@
     "/api/v1/illustrious/inpaint": {
       "post": {
         "tags": [
-          "Illustrious"
+          "Illustrious XL"
         ],
-        "summary": "Inpaint Illustrious",
-        "description": "Illustrious XL inpainting (async job).",
+        "summary": "Illustrious XL inpainting (async job)",
         "operationId": "inpaint_illustrious_api_v1_illustrious_inpaint_post",
         "requestBody": {
           "content": {
@@ -421,10 +411,9 @@
     "/api/v1/illustrious/generate/batch": {
       "post": {
         "tags": [
-          "Illustrious"
+          "Illustrious XL"
         ],
-        "summary": "Batch Generate Illustrious",
-        "description": "Generate multiple Illustrious XL images.",
+        "summary": "Generate multiple Illustrious XL images",
         "operationId": "batch_generate_illustrious_api_v1_illustrious_generate_batch_post",
         "requestBody": {
           "content": {
@@ -461,10 +450,9 @@
     "/api/v1/illustrious/generate/compare": {
       "post": {
         "tags": [
-          "Illustrious"
+          "Illustrious XL"
         ],
-        "summary": "Compare Models Illustrious",
-        "description": "Generate images from multiple Illustrious XL models for comparison.",
+        "summary": "Generate images from multiple Illustrious XL models for comparison",
         "operationId": "compare_models_illustrious_api_v1_illustrious_generate_compare_post",
         "requestBody": {
           "content": {
@@ -503,8 +491,7 @@
         "tags": [
           "Flux"
         ],
-        "summary": "Generate Flux",
-        "description": "Generate a Flux image (async job).",
+        "summary": "Generate a Flux image (async job)",
         "operationId": "generate_flux_api_v1_flux_generate_post",
         "requestBody": {
           "content": {
@@ -545,8 +532,7 @@
         "tags": [
           "Flux"
         ],
-        "summary": "Inpaint Flux",
-        "description": "Flux inpainting (async job).",
+        "summary": "Flux inpainting (async job)",
         "operationId": "inpaint_flux_api_v1_flux_inpaint_post",
         "requestBody": {
           "content": {
@@ -587,8 +573,7 @@
         "tags": [
           "Flux"
         ],
-        "summary": "Batch Generate Flux",
-        "description": "Generate multiple Flux images.",
+        "summary": "Generate multiple Flux images",
         "operationId": "batch_generate_flux_api_v1_flux_generate_batch_post",
         "requestBody": {
           "content": {
@@ -627,8 +612,7 @@
         "tags": [
           "Flux"
         ],
-        "summary": "Compare Models Flux",
-        "description": "Generate images from multiple Flux models for comparison.",
+        "summary": "Generate images from multiple Flux models for comparison",
         "operationId": "compare_models_flux_api_v1_flux_generate_compare_post",
         "requestBody": {
           "content": {
@@ -662,13 +646,173 @@
         }
       }
     },
+    "/api/v1/zimage/generate": {
+      "post": {
+        "tags": [
+          "Z-Image"
+        ],
+        "summary": "Generate a Z-Image image (async job)",
+        "operationId": "generate_zimage_api_v1_zimage_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZImageGenerationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/zimage/inpaint": {
+      "post": {
+        "tags": [
+          "Z-Image"
+        ],
+        "summary": "Z-Image inpainting (async job)",
+        "operationId": "inpaint_zimage_api_v1_zimage_inpaint_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZImageInpaintRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/zimage/generate/batch": {
+      "post": {
+        "tags": [
+          "Z-Image"
+        ],
+        "summary": "Generate multiple Z-Image images",
+        "operationId": "batch_generate_zimage_api_v1_zimage_generate_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZImageBatchGenerationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/zimage/generate/compare": {
+      "post": {
+        "tags": [
+          "Z-Image"
+        ],
+        "summary": "Generate images from multiple Z-Image models for comparison",
+        "operationId": "compare_models_zimage_api_v1_zimage_generate_compare_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZImageCompareModelsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/models/{model_type}/{resource_type}": {
       "get": {
         "tags": [
           "Models"
         ],
         "summary": "List Models",
-        "description": "List available models.\n\nArgs:\n    model_type: \"sd15\", \"sdxl\", \"illustrious\", or \"flux\"\n    resource_type: \"checkpoints\", \"loras\", or \"vaes\"\n\nReturns:\n    List of models with names, paths and, when known, Civitai details,\n    preview availability and (Flux checkpoints) bundled components",
+        "description": "List available models.\n\nArgs:\n    model_type: One of MODEL_TYPES\n    resource_type: \"checkpoints\", \"loras\", or \"vaes\"\n\nReturns:\n    List of models with names, paths and, when known, Civitai details,\n    preview availability and (Flux checkpoints) bundled components",
         "operationId": "list_models_api_v1_models__model_type___resource_type__get",
         "parameters": [
           {
@@ -779,7 +923,7 @@
           "Models"
         ],
         "summary": "Get Model Metadata",
-        "description": "Get metadata for a specific model.\n\nArgs:\n    model_type: \"sd15\", \"sdxl\", \"illustrious\", or \"flux\"\n    resource_type: \"checkpoints\", \"loras\", or \"vaes\"\n    model_name: Model filename\n\nReturns:\n    Model metadata from safetensors header",
+        "description": "Get metadata for a specific model.\n\nArgs:\n    model_type: One of MODEL_TYPES\n    resource_type: \"checkpoints\", \"loras\", or \"vaes\"\n    model_name: Model filename\n\nReturns:\n    Model metadata from safetensors header",
         "operationId": "get_model_metadata_api_v1_models__model_type___resource_type___model_name__metadata_get",
         "parameters": [
           {
@@ -840,7 +984,7 @@
           "Models"
         ],
         "summary": "Download Model",
-        "description": "Download a model file (e.g. a merged checkpoint).\n\nArgs:\n    model_type: \"sd15\", \"sdxl\", \"illustrious\", or \"flux\"\n    resource_type: \"checkpoints\", \"loras\", or \"vaes\"\n    model_name: Model filename",
+        "description": "Download a model file (e.g. a merged checkpoint).\n\nArgs:\n    model_type: One of MODEL_TYPES\n    resource_type: \"checkpoints\", \"loras\", or \"vaes\"\n    model_name: Model filename",
         "operationId": "download_model_api_v1_models__model_type___resource_type___model_name__download_get",
         "parameters": [
           {
@@ -1051,19 +1195,47 @@
           "Informational"
         ],
         "summary": "List Schedulers",
-        "description": "List available noise schedulers",
+        "description": "List available noise schedulers\n\nWithout model_type, lists the SD1.5/SDXL/Illustrious schedulers; Flux and\nZ-Image use the flow-matching set (model_type=flux or zimage).",
         "operationId": "list_schedulers_api_v1_info_schedulers_get",
+        "parameters": [
+          {
+            "name": "model_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Model Type"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "type": "string"
                   },
-                  "type": "array",
                   "title": "Response List Schedulers Api V1 Info Schedulers Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1101,7 +1273,7 @@
           "Merge"
         ],
         "summary": "Merge Models",
-        "description": "Merge two models asynchronously.\n\nValidates model existence, determines model type, and submits\nmerge job to the queue. The merged model will be saved to the\nsame checkpoint directory as the source models.\n\nArgs:\n    request: MergeRequest with model_type, base_model, target_model,\n             method, alpha, output_name, preserve_metadata\n\nReturns:\n    JobResponse with job_id, status, and message\n\nRaises:\n    HTTPException 404: If base_model or target_model not found",
+        "description": "Merge two models asynchronously.\n\nValidates model existence, determines model type, and submits\nmerge job to the queue. The merged model will be saved to the\nsame checkpoint directory as the source models.\n\nArgs:\n    request: MergeRequest with model_type, base_model, target_model,\n             method, alpha, output_name, output_dtype, preserve_metadata\n\nReturns:\n    JobResponse with job_id, status, and message\n\nRaises:\n    HTTPException 404: If base_model or target_model not found\n    HTTPException 400: If the checkpoints cannot be merged",
         "operationId": "merge_models_api_v1_merge_merge_post",
         "requestBody": {
           "content": {
@@ -1143,7 +1315,7 @@
           "Merge"
         ],
         "summary": "Batch Merge Models",
-        "description": "Merge base model with multiple target models in batch.\n\nCreates a subdirectory for batch results and merges each\ntarget model with the base model independently.\n\nArgs:\n    request: BatchMergeRequest with model_type, base_model, target_models,\n             method, alpha, output_subdir, preserve_metadata\n\nReturns:\n    JobResponse with job_id, status, and message\n\nRaises:\n    HTTPException 404: If base_model or any target_model not found",
+        "description": "Merge base model with multiple target models in batch.\n\nCreates a subdirectory for batch results and merges each\ntarget model with the base model independently.\n\nArgs:\n    request: BatchMergeRequest with model_type, base_model, target_models,\n             method, alpha, output_subdir, output_dtype, preserve_metadata\n\nReturns:\n    JobResponse with job_id, status, and message\n\nRaises:\n    HTTPException 404: If base_model or any target_model not found\n    HTTPException 400: If any target cannot be merged into the base",
         "operationId": "batch_merge_models_api_v1_merge_batch_post",
         "requestBody": {
           "content": {
@@ -1185,7 +1357,7 @@
           "Merge"
         ],
         "summary": "Recipe Merge Models",
-        "description": "Execute a multi-step merge recipe.\n\nApplies sequential merge operations following the recipe steps.\nEach step merges the current result with a new target model.\n\nArgs:\n    request: MergeRecipeRequest with model_type, base_model, steps,\n             output_name\n\nReturns:\n    JobResponse with job_id, status, and message\n\nRaises:\n    HTTPException 404: If base_model or any step's target_model not found",
+        "description": "Execute a multi-step merge recipe.\n\nApplies sequential merge operations following the recipe steps.\nEach step merges the current result with a new target model.\n\nArgs:\n    request: MergeRecipeRequest with model_type, base_model, steps,\n             output_name, output_dtype\n\nReturns:\n    JobResponse with job_id, status, and message\n\nRaises:\n    HTTPException 404: If base_model or any step's target_model not found\n    HTTPException 400: If any step's target cannot be merged into the base",
         "operationId": "recipe_merge_models_api_v1_merge_recipe_post",
         "requestBody": {
           "content": {
@@ -1780,7 +1952,7 @@
           "model_type": {
             "type": "string",
             "title": "Model Type",
-            "description": "Model type: 'sd15', 'sdxl', or 'illustrious'"
+            "description": "Model type: 'sd15', 'sdxl', 'illustrious', 'flux', 'zimage'"
           },
           "base_model": {
             "type": "string",
@@ -1812,6 +1984,18 @@
             "title": "Output Subdir",
             "description": "Output subdirectory",
             "default": "batch_merged"
+          },
+          "output_dtype": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "bfloat16",
+              "float16",
+              "float32"
+            ],
+            "title": "Output Dtype",
+            "description": "dtype of the merged tensors; 'auto' keeps each tensor's dtype from the base model",
+            "default": "auto"
           },
           "preserve_metadata": {
             "type": "boolean",
@@ -2603,7 +2787,7 @@
           "models"
         ],
         "title": "CompareModelsRequest",
-        "description": "Request for model comparison."
+        "description": "Request for model comparison.\n\nEvery field except `models` is forwarded to the architecture's\ngeneration request, once per model."
       },
       "FluxBatchGenerationRequest": {
         "properties": {
@@ -3340,7 +3524,7 @@
           "model_type": {
             "type": "string",
             "title": "Model Type",
-            "description": "Model type: 'sd15', 'sdxl', or 'illustrious'"
+            "description": "Model type: 'sd15', 'sdxl', 'illustrious', 'flux', 'zimage'"
           },
           "base_model": {
             "type": "string",
@@ -3358,6 +3542,18 @@
           "output_name": {
             "type": "string",
             "title": "Output Name"
+          },
+          "output_dtype": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "bfloat16",
+              "float16",
+              "float32"
+            ],
+            "title": "Output Dtype",
+            "description": "dtype of the merged tensors; 'auto' keeps each tensor's dtype from the base model",
+            "default": "auto"
           }
         },
         "type": "object",
@@ -3401,7 +3597,7 @@
           "model_type": {
             "type": "string",
             "title": "Model Type",
-            "description": "Model type: 'sd15', 'sdxl', or 'illustrious'"
+            "description": "Model type: 'sd15', 'sdxl', 'illustrious', 'flux', 'zimage'"
           },
           "base_model": {
             "type": "string",
@@ -3431,6 +3627,18 @@
             "type": "string",
             "title": "Output Name",
             "description": "Output checkpoint filename"
+          },
+          "output_dtype": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "bfloat16",
+              "float16",
+              "float32"
+            ],
+            "title": "Output Dtype",
+            "description": "dtype of the merged tensors; 'auto' keeps each tensor's dtype from the base model",
+            "default": "auto"
           },
           "preserve_metadata": {
             "type": "boolean",
@@ -3804,6 +4012,372 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "ZImageBatchGenerationRequest": {
+        "properties": {
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/ZImageGenerationRequest"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Requests",
+            "description": "List of generation requests"
+          }
+        },
+        "type": "object",
+        "required": [
+          "requests"
+        ],
+        "title": "ZImageBatchGenerationRequest",
+        "description": "Request for batch Z-Image generation."
+      },
+      "ZImageCompareModelsRequest": {
+        "properties": {
+          "positive_prompt": {
+            "type": "string",
+            "title": "Positive Prompt"
+          },
+          "negative_prompt": {
+            "type": "string",
+            "title": "Negative Prompt",
+            "default": ""
+          },
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 6,
+            "minItems": 2,
+            "title": "Models",
+            "description": "Model checkpoints to compare"
+          },
+          "width": {
+            "type": "integer",
+            "maximum": 2048,
+            "minimum": 256,
+            "title": "Width",
+            "default": 1024
+          },
+          "height": {
+            "type": "integer",
+            "maximum": 2048,
+            "minimum": 256,
+            "title": "Height",
+            "default": 1024
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 150,
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps",
+            "description": "Inference steps; default 8 (turbo) or 28 (base)"
+          },
+          "cfg_scale": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 30,
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cfg Scale",
+            "description": "Guidance scale, CFG is enabled when > 0 (negative prompt used); default 0.0 (turbo) or 4.0 (base)"
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": -1,
+            "title": "Seed",
+            "description": "Fixed seed for fair comparison",
+            "default": 42
+          },
+          "scheduler": {
+            "type": "string",
+            "title": "Scheduler",
+            "description": "Noise scheduler",
+            "default": "FlowMatch Euler"
+          },
+          "variant": {
+            "type": "string",
+            "enum": [
+              "turbo",
+              "base"
+            ],
+            "title": "Variant",
+            "description": "Checkpoint variant: 'turbo' (distilled) or 'base'",
+            "default": "turbo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "positive_prompt",
+          "models"
+        ],
+        "title": "ZImageCompareModelsRequest",
+        "description": "Request for Z-Image model comparison (all models of one variant)."
+      },
+      "ZImageGenerationRequest": {
+        "properties": {
+          "positive_prompt": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Positive Prompt",
+            "description": "Positive prompt"
+          },
+          "negative_prompt": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Negative Prompt",
+            "description": "Negative prompt",
+            "default": ""
+          },
+          "model_checkpoint": {
+            "type": "string",
+            "title": "Model Checkpoint",
+            "description": "Model checkpoint filename"
+          },
+          "width": {
+            "type": "integer",
+            "maximum": 2048,
+            "minimum": 256,
+            "title": "Width",
+            "description": "Image width",
+            "default": 1024
+          },
+          "height": {
+            "type": "integer",
+            "maximum": 2048,
+            "minimum": 256,
+            "title": "Height",
+            "description": "Image height",
+            "default": 1024
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 150,
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps",
+            "description": "Inference steps; default 8 (turbo) or 28 (base)"
+          },
+          "cfg_scale": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 30,
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cfg Scale",
+            "description": "Guidance scale, CFG is enabled when > 0 (negative prompt used); default 0.0 (turbo) or 4.0 (base)"
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": -1,
+            "title": "Seed",
+            "description": "Random seed (-1 for random)",
+            "default": -1
+          },
+          "scheduler": {
+            "type": "string",
+            "title": "Scheduler",
+            "description": "Noise scheduler",
+            "default": "FlowMatch Euler"
+          },
+          "loras": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/LoraConfig"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loras",
+            "description": "LoRA adapters"
+          },
+          "custom_vae": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Vae",
+            "description": "Custom VAE checkpoint"
+          },
+          "variant": {
+            "type": "string",
+            "enum": [
+              "turbo",
+              "base"
+            ],
+            "title": "Variant",
+            "description": "Checkpoint variant: 'turbo' (distilled) or 'base'",
+            "default": "turbo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "positive_prompt",
+          "model_checkpoint"
+        ],
+        "title": "ZImageGenerationRequest",
+        "description": "Request for Z-Image (Base and Turbo) image generation."
+      },
+      "ZImageInpaintRequest": {
+        "properties": {
+          "positive_prompt": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Positive Prompt"
+          },
+          "negative_prompt": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Negative Prompt",
+            "default": ""
+          },
+          "model_checkpoint": {
+            "type": "string",
+            "title": "Model Checkpoint"
+          },
+          "image_base64": {
+            "type": "string",
+            "title": "Image Base64",
+            "description": "Base64-encoded input image"
+          },
+          "mask_base64": {
+            "type": "string",
+            "title": "Mask Base64",
+            "description": "Base64-encoded mask image"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 150,
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps",
+            "description": "Inference steps; default 8 (turbo) or 28 (base)"
+          },
+          "cfg_scale": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 30,
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cfg Scale",
+            "description": "Guidance scale, CFG is enabled when > 0 (negative prompt used); default 0.0 (turbo) or 4.0 (base)"
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": -1,
+            "title": "Seed",
+            "default": -1
+          },
+          "scheduler": {
+            "type": "string",
+            "title": "Scheduler",
+            "description": "Noise scheduler",
+            "default": "FlowMatch Euler"
+          },
+          "loras": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/LoraConfig"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loras"
+          },
+          "custom_vae": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Vae"
+          },
+          "variant": {
+            "type": "string",
+            "enum": [
+              "turbo",
+              "base"
+            ],
+            "title": "Variant",
+            "description": "Checkpoint variant: 'turbo' (distilled) or 'base'",
+            "default": "turbo"
+          },
+          "strength": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1,
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strength",
+            "description": "Inpaint re-noising strength; None uses the pipeline default (1.0)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "positive_prompt",
+          "model_checkpoint",
+          "image_base64",
+          "mask_base64"
+        ],
+        "title": "ZImageInpaintRequest",
+        "description": "Request for Z-Image (Base and Turbo) inpainting."
       }
     }
   }

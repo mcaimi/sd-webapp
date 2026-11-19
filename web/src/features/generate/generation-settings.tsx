@@ -1,7 +1,7 @@
 import { ChevronDown } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 
-import { useSchedulers } from '@/api/queries'
+import { useModels, useSchedulers } from '@/api/queries'
 import { AspectPicker } from '@/components/form/aspect-picker'
 import { SeedField } from '@/components/form/seed-field'
 import { SliderField } from '@/components/form/slider-field'
@@ -12,8 +12,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { FAMILIES, type FamilyId } from '@/lib/families'
-import { appendToPrompt, MAX_BATCH, type GenerationParams } from '@/lib/generation'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { FAMILIES, type FamilyId, type VariantId } from '@/lib/families'
+import { appendToPrompt, MAX_BATCH, modelPatch, variantPatch, type GenerationParams } from '@/lib/generation'
 import { cn } from '@/lib/utils'
 
 interface GenerationSettingsProps {
@@ -42,8 +43,19 @@ export function GenerationSettings({
   extraSampling,
 }: GenerationSettingsProps) {
   const info = FAMILIES[family]
-  const { data: schedulers = [info.defaults.scheduler] } = useSchedulers(family)
-  const isFlux = family === 'flux'
+  const { data: apiSchedulers } = useSchedulers(family)
+  const schedulers = apiSchedulers ?? [params.scheduler]
+  const { data: checkpoints } = useModels(family, 'checkpoints')
+
+  // Recover from a saved scheduler the backend no longer offers.
+  useEffect(() => {
+    if (apiSchedulers?.length && !apiSchedulers.includes(params.scheduler)) onChange({ scheduler: apiSchedulers[0] })
+  }, [apiSchedulers, params.scheduler, onChange])
+
+  const selectModel = (model: string) => {
+    const entry = checkpoints?.find((m) => m.name === model)
+    onChange(entry ? modelPatch(family, entry, params) : { model })
+  }
 
   return (
     <div className="space-y-5">
@@ -57,7 +69,7 @@ export function GenerationSettings({
                 family={family}
                 resource="checkpoints"
                 value={params.model}
-                onChange={(model) => onChange({ model })}
+                onChange={selectModel}
                 placeholder="No checkpoints installed"
               />
             </div>
@@ -77,6 +89,27 @@ export function GenerationSettings({
 
       {(showModel || showAdapters) && <Separator />}
 
+      {info.variants && (
+        <div className="space-y-2">
+          <Label id="variant-label">Variant</Label>
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            aria-labelledby="variant-label"
+            value={params.variant}
+            onValueChange={(variant) => variant && onChange(variantPatch(family, variant as VariantId))}
+            className="w-full"
+          >
+            {info.variants.map((v) => (
+              <ToggleGroupItem key={v.id} value={v.id} className="flex-1">
+                {v.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          <p className="text-xs text-muted-foreground">Must match the checkpoint. Switching resets steps and CFG.</p>
+        </div>
+      )}
+
       {showSize && (
         <AspectPicker
           resolutions={info.resolutions}
@@ -91,16 +124,16 @@ export function GenerationSettings({
         value={params.steps}
         onChange={(steps) => onChange({ steps })}
         min={1}
-        max={isFlux ? 50 : 100}
+        max={info.sampling.maxSteps}
       />
       <SliderField
-        label={isFlux ? 'Guidance' : 'CFG scale'}
+        label={info.sampling.cfg.label}
         value={params.cfgScale}
         onChange={(cfgScale) => onChange({ cfgScale })}
-        min={isFlux ? 1 : 0}
-        max={isFlux ? 10 : 20}
+        min={info.sampling.cfg.min}
+        max={info.sampling.cfg.max}
         step={0.5}
-        hint={isFlux ? 'Distilled guidance; 3–4 is typical.' : undefined}
+        hint={info.sampling.cfg.hint}
       />
       {info.trueCfgScale && (
         <SliderField

@@ -6,7 +6,20 @@
  * Adding a family the backend supports means adding one entry.
  */
 
-export type FamilyId = 'sd15' | 'sdxl' | 'illustrious' | 'flux'
+export type FamilyId = 'sd15' | 'sdxl' | 'illustrious' | 'flux' | 'zimage'
+
+/** Z-Image checkpoint variant, sent as `variant`. */
+export type VariantId = 'turbo' | 'base'
+
+export interface Variant {
+  id: VariantId
+  label: string
+  /** Sampling defaults applied when the variant is selected. */
+  steps: number
+  cfgScale: number
+  /** Civitai base models of this variant, to preselect it from a checkpoint's sidecar. */
+  civitaiBaseModels: string[]
+}
 
 export interface Resolution {
   label: string
@@ -33,17 +46,25 @@ export interface Family {
   }
   /** Aspect-ratio presets near the architecture's native pixel count. */
   resolutions: Resolution[]
-  /**
-   * Fixed scheduler list, for families whose schedulers aren't returned by
-   * GET /info/schedulers (that endpoint only lists the SD schedulers).
-   * When undefined, the API list is used.
-   */
-  schedulers?: string[]
+  /** Slider ranges and wording for the sampling controls. */
+  sampling: {
+    maxSteps: number
+    cfg: { label: string; min: number; max: number; hint?: string }
+  }
   /** Flux's `true_cfg_scale`: >1.0 enables the negative prompt. */
   trueCfgScale?: { default: number; min: number; max: number }
-  /** Whether the negative prompt is honoured without extra settings. */
-  negativePrompt: boolean
+  /**
+   * When the negative prompt is honoured: always, only with True CFG above 1
+   * (Flux), or only with CFG above 0 (Z-Image).
+   */
+  negativePrompt: 'always' | 'true-cfg' | 'cfg'
+  /** Inpaint re-noising `strength`, for families whose inpaint request accepts it. */
+  inpaintStrength?: { default: number }
+  /** Checkpoint variants; the first is the default and matches `defaults`. */
+  variants?: Variant[]
 }
+
+const SD_SAMPLING: Family['sampling'] = { maxSteps: 100, cfg: { label: 'CFG scale', min: 0, max: 20 } }
 
 const SDXL_RESOLUTIONS: Resolution[] = [
   { label: '1:1', width: 1024, height: 1024 },
@@ -70,7 +91,8 @@ export const FAMILIES: Record<FamilyId, Family> = {
       { label: '3:4', width: 576, height: 768 },
       { label: '4:3', width: 768, height: 576 },
     ],
-    negativePrompt: true,
+    sampling: SD_SAMPLING,
+    negativePrompt: 'always',
   },
   sdxl: {
     id: 'sdxl',
@@ -80,7 +102,8 @@ export const FAMILIES: Record<FamilyId, Family> = {
     defaults: { width: 832, height: 1216, steps: 20, cfgScale: 7, scheduler: 'DPM++ 2M' },
     inpaintDefaults: { steps: 20, cfgScale: 7 },
     resolutions: SDXL_RESOLUTIONS,
-    negativePrompt: true,
+    sampling: SD_SAMPLING,
+    negativePrompt: 'always',
   },
   illustrious: {
     id: 'illustrious',
@@ -90,7 +113,8 @@ export const FAMILIES: Record<FamilyId, Family> = {
     defaults: { width: 832, height: 1216, steps: 28, cfgScale: 5.5, scheduler: 'Euler a' },
     inpaintDefaults: { steps: 24, cfgScale: 5.5 },
     resolutions: SDXL_RESOLUTIONS,
-    negativePrompt: true,
+    sampling: SD_SAMPLING,
+    negativePrompt: 'always',
   },
   flux: {
     id: 'flux',
@@ -100,10 +124,53 @@ export const FAMILIES: Record<FamilyId, Family> = {
     defaults: { width: 1024, height: 1024, steps: 28, cfgScale: 3.5, scheduler: 'FlowMatch Euler' },
     inpaintDefaults: { steps: 28, cfgScale: 3.5 },
     resolutions: SDXL_RESOLUTIONS,
-    schedulers: ['FlowMatch Euler', 'FlowMatch Heun'],
+    sampling: {
+      maxSteps: 50,
+      cfg: { label: 'Guidance', min: 1, max: 10, hint: 'Distilled guidance; 3–4 is typical.' },
+    },
     trueCfgScale: { default: 1, min: 1, max: 10 },
-    negativePrompt: false,
+    negativePrompt: 'true-cfg',
+    inpaintStrength: { default: 0.85 },
   },
+  zimage: {
+    id: 'zimage',
+    label: 'Z-Image',
+    shortLabel: 'Z-Image',
+    description: 'Single-stream transformer; Turbo renders in a handful of steps.',
+    defaults: { width: 1024, height: 1024, steps: 8, cfgScale: 0, scheduler: 'FlowMatch Euler' },
+    inpaintDefaults: { steps: 8, cfgScale: 0 },
+    resolutions: SDXL_RESOLUTIONS,
+    sampling: {
+      maxSteps: 50,
+      cfg: { label: 'CFG scale', min: 0, max: 10, hint: 'Above 0 enables the negative prompt; Turbo works best at 0.' },
+    },
+    negativePrompt: 'cfg',
+    inpaintStrength: { default: 1 },
+    variants: [
+      { id: 'turbo', label: 'Turbo', steps: 8, cfgScale: 0, civitaiBaseModels: ['ZImageTurbo'] },
+      { id: 'base', label: 'Base', steps: 28, cfgScale: 4, civitaiBaseModels: ['ZImageBase'] },
+    ],
+  },
+}
+
+/** Whether the family honours the negative prompt with these settings. */
+export function negativePromptActive(family: FamilyId, params: { cfgScale: number; trueCfgScale: number }): boolean {
+  const rule = FAMILIES[family].negativePrompt
+  return rule === 'always' || (rule === 'cfg' ? params.cfgScale > 0 : params.trueCfgScale > 1)
+}
+
+/** Why the negative prompt is hidden, for families that don't always honour it. */
+export function negativePromptNote(family: FamilyId): string {
+  const { shortLabel, negativePrompt } = FAMILIES[family]
+  return negativePrompt === 'cfg'
+    ? `${shortLabel} ignores negative prompts unless CFG is above 0.`
+    : `${shortLabel} ignores negative prompts unless True CFG is above 1.`
+}
+
+/** The variant a checkpoint's Civitai base model identifies, if any. */
+export function variantForBaseModel(family: FamilyId, baseModel: string | null | undefined): VariantId | undefined {
+  if (!baseModel) return undefined
+  return FAMILIES[family].variants?.find((v) => v.civitaiBaseModels.includes(baseModel))?.id
 }
 
 export const FAMILY_LIST: Family[] = Object.values(FAMILIES)

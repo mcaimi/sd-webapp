@@ -2,14 +2,14 @@ import { api, unwrap } from '@/api/client'
 import { queryClient } from '@/api/query-client'
 import { queryKeys } from '@/api/queries'
 import type { BatchGenerateResponse, CompareResponse } from '@/api/types'
-import type { FamilyId, ResourceType } from '@/lib/families'
+import { FAMILIES, type FamilyId, type ResourceType } from '@/lib/families'
 import { seedsFor, toApiParams, type GenerationParams } from '@/lib/generation'
 
 import { jobStore, type JobKind, type TrackedJob } from './job-store'
 
 /**
- * Family-scoped POST. The four families expose identical routes under their
- * own prefix; the per-family request differences (Flux's extra fields) are
+ * Family-scoped POST. The families expose identical routes under their own
+ * prefix; the per-family request differences (Flux's and Z-Image's extra fields) are
  * handled by `toApiParams`, so the body is passed through untyped here.
  */
 async function postFamily<T>(family: FamilyId, route: string, body: unknown): Promise<T> {
@@ -67,6 +67,7 @@ export async function submitCompare(family: FamilyId, params: GenerationParams, 
     cfg_scale: base.cfg_scale,
     seed,
     scheduler: base.scheduler,
+    ...('variant' in base ? { variant: base.variant } : {}),
   }
   const { comparisons } = await postFamily<CompareResponse>(family, 'generate/compare', request)
 
@@ -99,7 +100,7 @@ export async function submitInpaint(
     ...toApiParams(family, params, seed),
     image_base64: image.base64,
     mask_base64: maskBase64,
-    ...(family === 'flux' && strength !== undefined ? { strength } : {}),
+    ...(FAMILIES[family].inpaintStrength && strength !== undefined ? { strength } : {}),
   }
   const { job_id } = await postFamily<{ job_id: string }>(family, 'inpaint', request)
 
@@ -121,12 +122,16 @@ export async function submitInpaint(
   return job_id
 }
 
+/** dtype of merged tensors; 'auto' keeps each tensor's dtype from the base model. */
+export type OutputDtype = 'auto' | 'bfloat16' | 'float16' | 'float32'
+
 export interface MergeParams {
   base: string
   target: string
   method: string
   alpha: number
   outputName: string
+  outputDtype: OutputDtype
   preserveMetadata: boolean
 }
 
@@ -138,6 +143,7 @@ export async function submitMerge(family: FamilyId, p: MergeParams): Promise<str
     method: p.method,
     alpha: p.alpha,
     output_name: p.outputName,
+    output_dtype: p.outputDtype,
     preserve_metadata: p.preserveMetadata,
   }
   const { job_id } = await unwrap(api.POST('/api/v1/merge/merge', { body: request }))
@@ -151,6 +157,7 @@ export interface BatchMergeParams {
   method: string
   alpha: number
   outputSubdir: string
+  outputDtype: OutputDtype
   preserveMetadata: boolean
 }
 
@@ -162,6 +169,7 @@ export async function submitBatchMerge(family: FamilyId, p: BatchMergeParams): P
     method: p.method,
     alpha: p.alpha,
     output_subdir: p.outputSubdir,
+    output_dtype: p.outputDtype,
     preserve_metadata: p.preserveMetadata,
   }
   const { job_id } = await unwrap(api.POST('/api/v1/merge/batch', { body: request }))
@@ -190,12 +198,14 @@ export async function submitRecipeMerge(
   base: string,
   steps: RecipeStep[],
   outputName: string,
+  outputDtype: OutputDtype,
 ): Promise<string> {
   const request = {
     model_type: family,
     base_model: base,
     steps: steps.map((s) => ({ target_model: s.target, method: s.method, alpha: s.alpha })),
     output_name: outputName,
+    output_dtype: outputDtype,
   }
   const { job_id } = await unwrap(api.POST('/api/v1/merge/recipe', { body: request }))
   track([{ id: job_id, kind: 'recipe-merge', family, groupId: newGroupId(), label: outputName, model: base, request }])

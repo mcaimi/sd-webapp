@@ -10,11 +10,11 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
-import { submitRecipeMerge } from '@/jobs/submit'
+import { submitRecipeMerge, type OutputDtype } from '@/jobs/submit'
 import { useDraft } from '@/lib/drafts'
 import type { FamilyId } from '@/lib/families'
 
-import { ModelField, OutputNameField, SubmitRow } from './merge-controls'
+import { ModelField, OutputDtypeField, OutputNameField, SubmitRow } from './merge-controls'
 import { useOverwriteConfirm, useWouldOverwrite } from './merge-hooks'
 import { ensureSafetensors, isBlend, MERGE_METHODS, type MergeMethod } from './merge-utils'
 
@@ -29,6 +29,7 @@ interface RecipeDraft {
   base: string
   steps: RecipeStep[]
   outputName: string
+  outputDtype: OutputDtype
 }
 
 const MAX_STEPS = 10
@@ -38,6 +39,7 @@ export function RecipeMergeForm({ family }: { family: FamilyId }) {
     base: '',
     steps: [],
     outputName: 'recipe_merge.safetensors',
+    outputDtype: 'auto',
   }))
   const { data: checkpoints = [], isSuccess } = useModels(family, 'checkpoints')
 
@@ -53,6 +55,7 @@ export function RecipeMergeForm({ family }: { family: FamilyId }) {
         draft.base,
         draft.steps.map(({ target, method, alpha }) => ({ target, method, alpha })),
         ensureSafetensors(draft.outputName),
+        draft.outputDtype,
       ),
     onSuccess: () => toast.success('Recipe queued', { description: ensureSafetensors(draft.outputName) }),
     onError: (error) => toast.error('Could not start recipe', { description: error.message }),
@@ -146,6 +149,7 @@ export function RecipeMergeForm({ family }: { family: FamilyId }) {
       </div>
 
       <OutputNameField family={family} value={draft.outputName} onChange={(outputName) => setDraft({ outputName })} />
+      <OutputDtypeField value={draft.outputDtype} onChange={(outputDtype) => setDraft({ outputDtype })} />
       <SubmitRow
         problem={problem}
         pending={submit.isPending}

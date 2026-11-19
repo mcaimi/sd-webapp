@@ -4,8 +4,14 @@ test('single merge, then use the result in generate', async ({ page }) => {
   await page.goto('/merge/sd15')
   const name = page.getByLabel('Output filename')
   await name.fill('e2e_merged.safetensors')
+  await page.getByRole('combobox', { name: 'Precision' }).click()
+  await page.getByRole('option', { name: 'FP16' }).click()
   await page.getByRole('button', { name: /^Merge$/ }).click()
   await waitForJobsToSettle(page)
+  const [merge] = await page.evaluate(
+    () => JSON.parse(localStorage.getItem('sd-webapp.jobs')!) as { request: { output_dtype: string } }[],
+  )
+  expect(merge.request.output_dtype).toBe('float16')
 
   const jobs = page.getByRole('region', { name: 'Merge jobs' })
   const download = jobs.getByRole('link', { name: /Download/ }).or(jobs.getByRole('button', { name: /Download/ }))

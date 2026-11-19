@@ -9,12 +9,12 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { submitBatchMerge } from '@/jobs/submit'
+import { submitBatchMerge, type OutputDtype } from '@/jobs/submit'
 import { useDraft } from '@/lib/drafts'
 import type { FamilyId } from '@/lib/families'
 import { modelDisplayName } from '@/lib/models'
 
-import { AlphaField, MethodPicker, ModelField, SubmitRow } from './merge-controls'
+import { AlphaField, MethodPicker, ModelField, OutputDtypeField, SubmitRow } from './merge-controls'
 import type { MergeMethod } from './merge-utils'
 
 interface BatchDraft {
@@ -23,6 +23,7 @@ interface BatchDraft {
   method: MergeMethod
   alpha: number
   outputSubdir: string
+  outputDtype: OutputDtype
   preserveMetadata: boolean
 }
 
@@ -33,6 +34,7 @@ export function BatchMergeForm({ family }: { family: FamilyId }) {
     method: 'linear',
     alpha: 0.5,
     outputSubdir: 'batch_merged',
+    outputDtype: 'auto',
     preserveMetadata: true,
   }))
   const { data: checkpoints = [], isSuccess } = useModels(family, 'checkpoints')
@@ -54,6 +56,7 @@ export function BatchMergeForm({ family }: { family: FamilyId }) {
         method: draft.method,
         alpha: draft.alpha,
         outputSubdir: draft.outputSubdir.trim() || 'batch_merged',
+        outputDtype: draft.outputDtype,
         preserveMetadata: draft.preserveMetadata,
       }),
     onSuccess: () => toast.success('Batch merge queued', { description: `${draft.targets.length} outputs` }),
@@ -131,6 +134,7 @@ export function BatchMergeForm({ family }: { family: FamilyId }) {
         />
         <p className="text-xs text-muted-foreground">Created inside the family's checkpoint folder.</p>
       </div>
+      <OutputDtypeField value={draft.outputDtype} onChange={(outputDtype) => setDraft({ outputDtype })} />
       <div className="flex items-center gap-2">
         <Switch
           id="batch-preserve"
