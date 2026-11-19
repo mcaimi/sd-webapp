@@ -20,6 +20,7 @@ const SPEED = Number(process.env.MOCK_SPEED ?? 1)
 const FAMILIES = ['sd15', 'sdxl', 'illustrious', 'flux']
 const MS_PER_STEP = { sd15: 60, sdxl: 110, illustrious: 110, flux: 180 }
 const SD_SCHEDULERS = ['DPM++ 2M', 'DPM++ SDE', 'DPM2', 'Euler a', 'Euler', 'Heun', 'LMS']
+const OUTPUT_DTYPES = ['auto', 'bfloat16', 'float16', 'float32']
 
 const models = {
   sd15: {
@@ -460,6 +461,8 @@ function mergeOutput(family, name) {
 }
 route('POST', '/api/v1/merge/merge', (req, res) => {
   const b = req.body
+  if (b.output_dtype !== undefined && !OUTPUT_DTYPES.includes(b.output_dtype))
+    return validationError(res, 'output_dtype')
   if (!requireModel(res, b.model_type, b.base_model) || !requireModel(res, b.model_type, b.target_model)) return
   const job = submit('merge', 4000, () => {
     const file = mergeOutput(b.model_type, b.output_name)
@@ -476,6 +479,8 @@ route('POST', '/api/v1/merge/merge', (req, res) => {
 })
 route('POST', '/api/v1/merge/batch', (req, res) => {
   const b = req.body
+  if (b.output_dtype !== undefined && !OUTPUT_DTYPES.includes(b.output_dtype))
+    return validationError(res, 'output_dtype')
   if (!requireModel(res, b.model_type, b.base_model)) return
   const job = submit('batch_merge', 2500 * b.target_models.length, () => {
     const paths = b.target_models.map((t) => {
@@ -488,6 +493,8 @@ route('POST', '/api/v1/merge/batch', (req, res) => {
 })
 route('POST', '/api/v1/merge/recipe', (req, res) => {
   const b = req.body
+  if (b.output_dtype !== undefined && !OUTPUT_DTYPES.includes(b.output_dtype))
+    return validationError(res, 'output_dtype')
   if (!requireModel(res, b.model_type, b.base_model)) return
   const job = submit('recipe_merge', 2500 * b.steps.length, () => {
     const file = mergeOutput(b.model_type, b.output_name)

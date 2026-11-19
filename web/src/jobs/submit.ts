@@ -121,12 +121,16 @@ export async function submitInpaint(
   return job_id
 }
 
+/** dtype of merged tensors; 'auto' keeps each tensor's dtype from the base model. */
+export type OutputDtype = 'auto' | 'bfloat16' | 'float16' | 'float32'
+
 export interface MergeParams {
   base: string
   target: string
   method: string
   alpha: number
   outputName: string
+  outputDtype: OutputDtype
   preserveMetadata: boolean
 }
 
@@ -138,6 +142,7 @@ export async function submitMerge(family: FamilyId, p: MergeParams): Promise<str
     method: p.method,
     alpha: p.alpha,
     output_name: p.outputName,
+    output_dtype: p.outputDtype,
     preserve_metadata: p.preserveMetadata,
   }
   const { job_id } = await unwrap(api.POST('/api/v1/merge/merge', { body: request }))
@@ -151,6 +156,7 @@ export interface BatchMergeParams {
   method: string
   alpha: number
   outputSubdir: string
+  outputDtype: OutputDtype
   preserveMetadata: boolean
 }
 
@@ -162,6 +168,7 @@ export async function submitBatchMerge(family: FamilyId, p: BatchMergeParams): P
     method: p.method,
     alpha: p.alpha,
     output_subdir: p.outputSubdir,
+    output_dtype: p.outputDtype,
     preserve_metadata: p.preserveMetadata,
   }
   const { job_id } = await unwrap(api.POST('/api/v1/merge/batch', { body: request }))
@@ -190,12 +197,14 @@ export async function submitRecipeMerge(
   base: string,
   steps: RecipeStep[],
   outputName: string,
+  outputDtype: OutputDtype,
 ): Promise<string> {
   const request = {
     model_type: family,
     base_model: base,
     steps: steps.map((s) => ({ target_model: s.target, method: s.method, alpha: s.alpha })),
     output_name: outputName,
+    output_dtype: outputDtype,
   }
   const { job_id } = await unwrap(api.POST('/api/v1/merge/recipe', { body: request }))
   track([{ id: job_id, kind: 'recipe-merge', family, groupId: newGroupId(), label: outputName, model: base, request }])

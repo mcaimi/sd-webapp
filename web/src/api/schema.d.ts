@@ -13,10 +13,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Generate Sd15
-         * @description Generate an SD1.5 image (async job).
-         */
+        /** Generate a SD1.5 image (async job) */
         post: operations["generate_sd15_api_v1_sd15_generate_post"];
         delete?: never;
         options?: never;
@@ -33,10 +30,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Inpaint Sd15
-         * @description SD1.5 inpainting (async job).
-         */
+        /** SD1.5 inpainting (async job) */
         post: operations["inpaint_sd15_api_v1_sd15_inpaint_post"];
         delete?: never;
         options?: never;
@@ -53,10 +47,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Batch Generate Sd15
-         * @description Generate multiple SD1.5 images.
-         */
+        /** Generate multiple SD1.5 images */
         post: operations["batch_generate_sd15_api_v1_sd15_generate_batch_post"];
         delete?: never;
         options?: never;
@@ -73,10 +64,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Compare Models Sd15
-         * @description Generate images from multiple SD1.5 models for comparison.
-         */
+        /** Generate images from multiple SD1.5 models for comparison */
         post: operations["compare_models_sd15_api_v1_sd15_generate_compare_post"];
         delete?: never;
         options?: never;
@@ -93,10 +81,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Generate Sdxl
-         * @description Generate an SDXL image (async job).
-         */
+        /** Generate a SDXL image (async job) */
         post: operations["generate_sdxl_api_v1_sdxl_generate_post"];
         delete?: never;
         options?: never;
@@ -113,10 +98,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Inpaint Sdxl
-         * @description SDXL inpainting (async job).
-         */
+        /** SDXL inpainting (async job) */
         post: operations["inpaint_sdxl_api_v1_sdxl_inpaint_post"];
         delete?: never;
         options?: never;
@@ -133,10 +115,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Batch Generate Sdxl
-         * @description Generate multiple SDXL images.
-         */
+        /** Generate multiple SDXL images */
         post: operations["batch_generate_sdxl_api_v1_sdxl_generate_batch_post"];
         delete?: never;
         options?: never;
@@ -153,10 +132,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Compare Models Sdxl
-         * @description Generate images from multiple SDXL models for comparison.
-         */
+        /** Generate images from multiple SDXL models for comparison */
         post: operations["compare_models_sdxl_api_v1_sdxl_generate_compare_post"];
         delete?: never;
         options?: never;
@@ -173,10 +149,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Generate Illustrious
-         * @description Generate an Illustrious XL image (async job).
-         */
+        /** Generate a Illustrious XL image (async job) */
         post: operations["generate_illustrious_api_v1_illustrious_generate_post"];
         delete?: never;
         options?: never;
@@ -193,10 +166,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Inpaint Illustrious
-         * @description Illustrious XL inpainting (async job).
-         */
+        /** Illustrious XL inpainting (async job) */
         post: operations["inpaint_illustrious_api_v1_illustrious_inpaint_post"];
         delete?: never;
         options?: never;
@@ -213,10 +183,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Batch Generate Illustrious
-         * @description Generate multiple Illustrious XL images.
-         */
+        /** Generate multiple Illustrious XL images */
         post: operations["batch_generate_illustrious_api_v1_illustrious_generate_batch_post"];
         delete?: never;
         options?: never;
@@ -233,10 +200,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Compare Models Illustrious
-         * @description Generate images from multiple Illustrious XL models for comparison.
-         */
+        /** Generate images from multiple Illustrious XL models for comparison */
         post: operations["compare_models_illustrious_api_v1_illustrious_generate_compare_post"];
         delete?: never;
         options?: never;
@@ -253,10 +217,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Generate Flux
-         * @description Generate a Flux image (async job).
-         */
+        /** Generate a Flux image (async job) */
         post: operations["generate_flux_api_v1_flux_generate_post"];
         delete?: never;
         options?: never;
@@ -273,10 +234,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Inpaint Flux
-         * @description Flux inpainting (async job).
-         */
+        /** Flux inpainting (async job) */
         post: operations["inpaint_flux_api_v1_flux_inpaint_post"];
         delete?: never;
         options?: never;
@@ -293,10 +251,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Batch Generate Flux
-         * @description Generate multiple Flux images.
-         */
+        /** Generate multiple Flux images */
         post: operations["batch_generate_flux_api_v1_flux_generate_batch_post"];
         delete?: never;
         options?: never;
@@ -313,11 +268,76 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Compare Models Flux
-         * @description Generate images from multiple Flux models for comparison.
-         */
+        /** Generate images from multiple Flux models for comparison */
         post: operations["compare_models_flux_api_v1_flux_generate_compare_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zimage/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate a Z-Image image (async job) */
+        post: operations["generate_zimage_api_v1_zimage_generate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zimage/inpaint": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Z-Image inpainting (async job) */
+        post: operations["inpaint_zimage_api_v1_zimage_inpaint_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zimage/generate/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate multiple Z-Image images */
+        post: operations["batch_generate_zimage_api_v1_zimage_generate_batch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zimage/generate/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate images from multiple Z-Image models for comparison */
+        post: operations["compare_models_zimage_api_v1_zimage_generate_compare_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -336,7 +356,7 @@ export interface paths {
          * @description List available models.
          *
          *     Args:
-         *         model_type: "sd15", "sdxl", "illustrious", or "flux"
+         *         model_type: One of MODEL_TYPES
          *         resource_type: "checkpoints", "loras", or "vaes"
          *
          *     Returns:
@@ -384,7 +404,7 @@ export interface paths {
          * @description Get metadata for a specific model.
          *
          *     Args:
-         *         model_type: "sd15", "sdxl", "illustrious", or "flux"
+         *         model_type: One of MODEL_TYPES
          *         resource_type: "checkpoints", "loras", or "vaes"
          *         model_name: Model filename
          *
@@ -412,7 +432,7 @@ export interface paths {
          * @description Download a model file (e.g. a merged checkpoint).
          *
          *     Args:
-         *         model_type: "sd15", "sdxl", "illustrious", or "flux"
+         *         model_type: One of MODEL_TYPES
          *         resource_type: "checkpoints", "loras", or "vaes"
          *         model_name: Model filename
          */
@@ -519,6 +539,9 @@ export interface paths {
         /**
          * List Schedulers
          * @description List available noise schedulers
+         *
+         *     Without model_type, lists the SD1.5/SDXL/Illustrious schedulers; Flux and
+         *     Z-Image use the flow-matching set (model_type=flux or zimage).
          */
         get: operations["list_schedulers_api_v1_info_schedulers_get"];
         put?: never;
@@ -568,13 +591,14 @@ export interface paths {
          *
          *     Args:
          *         request: MergeRequest with model_type, base_model, target_model,
-         *                  method, alpha, output_name, preserve_metadata
+         *                  method, alpha, output_name, output_dtype, preserve_metadata
          *
          *     Returns:
          *         JobResponse with job_id, status, and message
          *
          *     Raises:
          *         HTTPException 404: If base_model or target_model not found
+         *         HTTPException 400: If the checkpoints cannot be merged
          */
         post: operations["merge_models_api_v1_merge_merge_post"];
         delete?: never;
@@ -601,13 +625,14 @@ export interface paths {
          *
          *     Args:
          *         request: BatchMergeRequest with model_type, base_model, target_models,
-         *                  method, alpha, output_subdir, preserve_metadata
+         *                  method, alpha, output_subdir, output_dtype, preserve_metadata
          *
          *     Returns:
          *         JobResponse with job_id, status, and message
          *
          *     Raises:
          *         HTTPException 404: If base_model or any target_model not found
+         *         HTTPException 400: If any target cannot be merged into the base
          */
         post: operations["batch_merge_models_api_v1_merge_batch_post"];
         delete?: never;
@@ -634,13 +659,14 @@ export interface paths {
          *
          *     Args:
          *         request: MergeRecipeRequest with model_type, base_model, steps,
-         *                  output_name
+         *                  output_name, output_dtype
          *
          *     Returns:
          *         JobResponse with job_id, status, and message
          *
          *     Raises:
          *         HTTPException 404: If base_model or any step's target_model not found
+         *         HTTPException 400: If any step's target cannot be merged into the base
          */
         post: operations["recipe_merge_models_api_v1_merge_recipe_post"];
         delete?: never;
@@ -885,7 +911,7 @@ export interface components {
         BatchMergeRequest: {
             /**
              * Model Type
-             * @description Model type: 'sd15', 'sdxl', or 'illustrious'
+             * @description Model type: 'sd15', 'sdxl', 'illustrious', 'flux', 'zimage'
              */
             model_type: string;
             /** Base Model */
@@ -911,6 +937,13 @@ export interface components {
              * @default batch_merged
              */
             output_subdir: string;
+            /**
+             * Output Dtype
+             * @description dtype of the merged tensors; 'auto' keeps each tensor's dtype from the base model
+             * @default auto
+             * @enum {string}
+             */
+            output_dtype: "auto" | "bfloat16" | "float16" | "float32";
             /**
              * Preserve Metadata
              * @default true
@@ -1205,6 +1238,9 @@ export interface components {
         /**
          * CompareModelsRequest
          * @description Request for model comparison.
+         *
+         *     Every field except `models` is forwarded to the architecture's
+         *     generation request, once per model.
          */
         CompareModelsRequest: {
             /** Positive Prompt */
@@ -1671,7 +1707,7 @@ export interface components {
         MergeRecipeRequest: {
             /**
              * Model Type
-             * @description Model type: 'sd15', 'sdxl', or 'illustrious'
+             * @description Model type: 'sd15', 'sdxl', 'illustrious', 'flux', 'zimage'
              */
             model_type: string;
             /** Base Model */
@@ -1683,6 +1719,13 @@ export interface components {
             steps: components["schemas"]["MergeRecipeStep"][];
             /** Output Name */
             output_name: string;
+            /**
+             * Output Dtype
+             * @description dtype of the merged tensors; 'auto' keeps each tensor's dtype from the base model
+             * @default auto
+             * @enum {string}
+             */
+            output_dtype: "auto" | "bfloat16" | "float16" | "float32";
         };
         /**
          * MergeRecipeStep
@@ -1703,7 +1746,7 @@ export interface components {
         MergeRequest: {
             /**
              * Model Type
-             * @description Model type: 'sd15', 'sdxl', or 'illustrious'
+             * @description Model type: 'sd15', 'sdxl', 'illustrious', 'flux', 'zimage'
              */
             model_type: string;
             /**
@@ -1733,6 +1776,13 @@ export interface components {
              * @description Output checkpoint filename
              */
             output_name: string;
+            /**
+             * Output Dtype
+             * @description dtype of the merged tensors; 'auto' keeps each tensor's dtype from the base model
+             * @default auto
+             * @enum {string}
+             */
+            output_dtype: "auto" | "bfloat16" | "float16" | "float32";
             /**
              * Preserve Metadata
              * @description Preserve model metadata
@@ -1890,6 +1940,209 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /**
+         * ZImageBatchGenerationRequest
+         * @description Request for batch Z-Image generation.
+         */
+        ZImageBatchGenerationRequest: {
+            /**
+             * Requests
+             * @description List of generation requests
+             */
+            requests: components["schemas"]["ZImageGenerationRequest"][];
+        };
+        /**
+         * ZImageCompareModelsRequest
+         * @description Request for Z-Image model comparison (all models of one variant).
+         */
+        ZImageCompareModelsRequest: {
+            /** Positive Prompt */
+            positive_prompt: string;
+            /**
+             * Negative Prompt
+             * @default
+             */
+            negative_prompt: string;
+            /**
+             * Models
+             * @description Model checkpoints to compare
+             */
+            models: string[];
+            /**
+             * Width
+             * @default 1024
+             */
+            width: number;
+            /**
+             * Height
+             * @default 1024
+             */
+            height: number;
+            /**
+             * Steps
+             * @description Inference steps; default 8 (turbo) or 28 (base)
+             */
+            steps?: number | null;
+            /**
+             * Cfg Scale
+             * @description Guidance scale, CFG is enabled when > 0 (negative prompt used); default 0.0 (turbo) or 4.0 (base)
+             */
+            cfg_scale?: number | null;
+            /**
+             * Seed
+             * @description Fixed seed for fair comparison
+             * @default 42
+             */
+            seed: number;
+            /**
+             * Scheduler
+             * @description Noise scheduler
+             * @default FlowMatch Euler
+             */
+            scheduler: string;
+            /**
+             * Variant
+             * @description Checkpoint variant: 'turbo' (distilled) or 'base'
+             * @default turbo
+             * @enum {string}
+             */
+            variant: "turbo" | "base";
+        };
+        /**
+         * ZImageGenerationRequest
+         * @description Request for Z-Image (Base and Turbo) image generation.
+         */
+        ZImageGenerationRequest: {
+            /**
+             * Positive Prompt
+             * @description Positive prompt
+             */
+            positive_prompt: string;
+            /**
+             * Negative Prompt
+             * @description Negative prompt
+             * @default
+             */
+            negative_prompt: string;
+            /**
+             * Model Checkpoint
+             * @description Model checkpoint filename
+             */
+            model_checkpoint: string;
+            /**
+             * Width
+             * @description Image width
+             * @default 1024
+             */
+            width: number;
+            /**
+             * Height
+             * @description Image height
+             * @default 1024
+             */
+            height: number;
+            /**
+             * Steps
+             * @description Inference steps; default 8 (turbo) or 28 (base)
+             */
+            steps?: number | null;
+            /**
+             * Cfg Scale
+             * @description Guidance scale, CFG is enabled when > 0 (negative prompt used); default 0.0 (turbo) or 4.0 (base)
+             */
+            cfg_scale?: number | null;
+            /**
+             * Seed
+             * @description Random seed (-1 for random)
+             * @default -1
+             */
+            seed: number;
+            /**
+             * Scheduler
+             * @description Noise scheduler
+             * @default FlowMatch Euler
+             */
+            scheduler: string;
+            /**
+             * Loras
+             * @description LoRA adapters
+             */
+            loras?: components["schemas"]["LoraConfig"][] | null;
+            /**
+             * Custom Vae
+             * @description Custom VAE checkpoint
+             */
+            custom_vae?: string | null;
+            /**
+             * Variant
+             * @description Checkpoint variant: 'turbo' (distilled) or 'base'
+             * @default turbo
+             * @enum {string}
+             */
+            variant: "turbo" | "base";
+        };
+        /**
+         * ZImageInpaintRequest
+         * @description Request for Z-Image (Base and Turbo) inpainting.
+         */
+        ZImageInpaintRequest: {
+            /** Positive Prompt */
+            positive_prompt: string;
+            /**
+             * Negative Prompt
+             * @default
+             */
+            negative_prompt: string;
+            /** Model Checkpoint */
+            model_checkpoint: string;
+            /**
+             * Image Base64
+             * @description Base64-encoded input image
+             */
+            image_base64: string;
+            /**
+             * Mask Base64
+             * @description Base64-encoded mask image
+             */
+            mask_base64: string;
+            /**
+             * Steps
+             * @description Inference steps; default 8 (turbo) or 28 (base)
+             */
+            steps?: number | null;
+            /**
+             * Cfg Scale
+             * @description Guidance scale, CFG is enabled when > 0 (negative prompt used); default 0.0 (turbo) or 4.0 (base)
+             */
+            cfg_scale?: number | null;
+            /**
+             * Seed
+             * @default -1
+             */
+            seed: number;
+            /**
+             * Scheduler
+             * @description Noise scheduler
+             * @default FlowMatch Euler
+             */
+            scheduler: string;
+            /** Loras */
+            loras?: components["schemas"]["LoraConfig"][] | null;
+            /** Custom Vae */
+            custom_vae?: string | null;
+            /**
+             * Variant
+             * @description Checkpoint variant: 'turbo' (distilled) or 'base'
+             * @default turbo
+             * @enum {string}
+             */
+            variant: "turbo" | "base";
+            /**
+             * Strength
+             * @description Inpaint re-noising strength; None uses the pipeline default (1.0)
+             */
+            strength?: number | null;
+        };
     };
     responses: never;
     parameters: never;
@@ -1936,6 +2189,10 @@ export type OutputItem = components['schemas']['OutputItem'];
 export type OutputListResponse = components['schemas']['OutputListResponse'];
 export type SystemInfo = components['schemas']['SystemInfo'];
 export type ValidationError = components['schemas']['ValidationError'];
+export type ZImageBatchGenerationRequest = components['schemas']['ZImageBatchGenerationRequest'];
+export type ZImageCompareModelsRequest = components['schemas']['ZImageCompareModelsRequest'];
+export type ZImageGenerationRequest = components['schemas']['ZImageGenerationRequest'];
+export type ZImageInpaintRequest = components['schemas']['ZImageInpaintRequest'];
 export type $defs = Record<string, never>;
 export interface operations {
     generate_sd15_api_v1_sd15_generate_post: {
@@ -2466,6 +2723,138 @@ export interface operations {
             };
         };
     };
+    generate_zimage_api_v1_zimage_generate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ZImageGenerationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    inpaint_zimage_api_v1_zimage_inpaint_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ZImageInpaintRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    batch_generate_zimage_api_v1_zimage_generate_batch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ZImageBatchGenerationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_models_zimage_api_v1_zimage_generate_compare_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ZImageCompareModelsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_models_api_v1_models__model_type___resource_type__get: {
         parameters: {
             query?: never;
@@ -2721,7 +3110,9 @@ export interface operations {
     };
     list_schedulers_api_v1_info_schedulers_get: {
         parameters: {
-            query?: never;
+            query?: {
+                model_type?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2735,6 +3126,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": string[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
