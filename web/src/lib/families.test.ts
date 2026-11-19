@@ -12,10 +12,6 @@ describe('family registry', () => {
     expect(family.resolutions).toContainEqual(expect.objectContaining({ width, height }))
   })
 
-  it.each(FAMILY_LIST.filter((f) => f.schedulers))('$id default scheduler is in its scheduler list', (family) => {
-    expect(family.schedulers).toContain(family.defaults.scheduler)
-  })
-
   it('validates family ids', () => {
     expect(isFamilyId(DEFAULT_FAMILY)).toBe(true)
     expect(isFamilyId('flux')).toBe(true)

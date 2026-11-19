@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { FAMILIES, type FamilyId, type ResourceType } from '@/lib/families'
+import type { FamilyId, ResourceType } from '@/lib/families'
 
 import { api, ApiError, unwrap } from './client'
 
 export const queryKeys = {
   health: ['health'] as const,
   systemInfo: ['system-info'] as const,
-  schedulers: ['schedulers'] as const,
+  schedulers: (family: FamilyId) => ['schedulers', family] as const,
   models: (family: FamilyId, resource: ResourceType) => ['models', family, resource] as const,
   modelMetadata: (family: FamilyId, resource: ResourceType, name: string) =>
     ['model-metadata', family, resource, name] as const,
@@ -32,16 +32,13 @@ export function useSystemInfo(options: { refetchInterval?: number } = {}) {
   })
 }
 
-/** Schedulers valid for a family: the registry override, else the API list. */
+/** Schedulers valid for a family (Flux and Z-Image use the flow-matching set). */
 export function useSchedulers(family: FamilyId) {
-  const override = FAMILIES[family].schedulers
-  const query = useQuery({
-    queryKey: queryKeys.schedulers,
-    queryFn: () => unwrap(api.GET('/api/v1/info/schedulers')),
+  return useQuery({
+    queryKey: queryKeys.schedulers(family),
+    queryFn: () => unwrap(api.GET('/api/v1/info/schedulers', { params: { query: { model_type: family } } })),
     staleTime: 5 * 60_000,
-    enabled: !override,
   })
-  return override ? { ...query, data: override, isPending: false, isError: false } : query
 }
 
 export function useModels(family: FamilyId, resource: ResourceType) {

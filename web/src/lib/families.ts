@@ -33,12 +33,6 @@ export interface Family {
   }
   /** Aspect-ratio presets near the architecture's native pixel count. */
   resolutions: Resolution[]
-  /**
-   * Fixed scheduler list, for families whose schedulers aren't returned by
-   * GET /info/schedulers (that endpoint only lists the SD schedulers).
-   * When undefined, the API list is used.
-   */
-  schedulers?: string[]
   /** Flux's `true_cfg_scale`: >1.0 enables the negative prompt. */
   trueCfgScale?: { default: number; min: number; max: number }
   /** Whether the negative prompt is honoured without extra settings. */
@@ -100,7 +94,6 @@ export const FAMILIES: Record<FamilyId, Family> = {
     defaults: { width: 1024, height: 1024, steps: 28, cfgScale: 3.5, scheduler: 'FlowMatch Euler' },
     inpaintDefaults: { steps: 28, cfgScale: 3.5 },
     resolutions: SDXL_RESOLUTIONS,
-    schedulers: ['FlowMatch Euler', 'FlowMatch Heun'],
     trueCfgScale: { default: 1, min: 1, max: 10 },
     negativePrompt: false,
   },

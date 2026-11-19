@@ -20,6 +20,7 @@ const SPEED = Number(process.env.MOCK_SPEED ?? 1)
 const FAMILIES = ['sd15', 'sdxl', 'illustrious', 'flux']
 const MS_PER_STEP = { sd15: 60, sdxl: 110, illustrious: 110, flux: 180 }
 const SD_SCHEDULERS = ['DPM++ 2M', 'DPM++ SDE', 'DPM2', 'Euler a', 'Euler', 'Heun', 'LMS']
+const FLOW_SCHEDULERS = ['FlowMatch Euler']
 const OUTPUT_DTYPES = ['auto', 'bfloat16', 'float16', 'float32']
 
 const models = {
@@ -358,7 +359,11 @@ route('GET', '/api/v1/civitai/status', (_req, res) =>
     period_options: ['AllTime', 'Year', 'Month', 'Week', 'Day'],
   }),
 )
-route('GET', '/api/v1/info/schedulers', (_req, res) => send(res, 200, SD_SCHEDULERS))
+route('GET', '/api/v1/info/schedulers', (req, res) => {
+  const family = query(req).get('model_type')
+  if (family && !FAMILIES.includes(family)) return send(res, 400, { detail: 'Invalid model_type' })
+  send(res, 200, family === 'flux' ? FLOW_SCHEDULERS : SD_SCHEDULERS)
+})
 
 route('GET', '/api/v1/models/:family/:resource', (_req, res, { family, resource }) => {
   if (!models[family]?.[resource]) return send(res, 400, { detail: 'Invalid model type or resource' })

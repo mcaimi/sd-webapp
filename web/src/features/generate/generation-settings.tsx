@@ -1,5 +1,5 @@
 import { ChevronDown } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 
 import { useSchedulers } from '@/api/queries'
 import { AspectPicker } from '@/components/form/aspect-picker'
@@ -42,8 +42,14 @@ export function GenerationSettings({
   extraSampling,
 }: GenerationSettingsProps) {
   const info = FAMILIES[family]
-  const { data: schedulers = [info.defaults.scheduler] } = useSchedulers(family)
+  const { data: apiSchedulers } = useSchedulers(family)
+  const schedulers = apiSchedulers ?? [params.scheduler]
   const isFlux = family === 'flux'
+
+  // Recover from a saved scheduler the backend no longer offers.
+  useEffect(() => {
+    if (apiSchedulers?.length && !apiSchedulers.includes(params.scheduler)) onChange({ scheduler: apiSchedulers[0] })
+  }, [apiSchedulers, params.scheduler, onChange])
 
   return (
     <div className="space-y-5">
