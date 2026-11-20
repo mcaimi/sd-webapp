@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router'
 
 import { queryClient } from '@/api/query-client'
+import { AuthGate } from '@/components/auth-gate'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -19,7 +20,9 @@ createRoot(document.getElementById('root')!).render(
         {/* Honour the OS "reduce motion" setting for every animation. */}
         <MotionConfig reducedMotion="user">
           <TooltipProvider delayDuration={300}>
-            <RouterProvider router={router} />
+            <AuthGate>
+              <RouterProvider router={router} />
+            </AuthGate>
             {/* Mobile offset clears the fixed submit bar on tool pages. */}
             <Toaster richColors position="bottom-right" mobileOffset={{ bottom: '5.5rem' }} />
           </TooltipProvider>

@@ -1,16 +1,21 @@
 import AxeBuilder from '@axe-core/playwright'
 import { test as base, expect, type Page } from '@playwright/test'
 
-import { MOCK_URL } from '../playwright.config'
+import { E2E_TOKEN, MOCK_URL } from '../playwright.config'
+
+export const AUTH_COOKIE = 'sd_webapp_token'
+/** For direct API requests, which don't share the page's cookies. */
+export const authHeaders = { Authorization: `Bearer ${E2E_TOKEN}` }
 
 /**
- * Every test starts from a clean mock backend and empty browser storage, and
- * fails if the page logs a console error.
+ * Every test starts from a clean mock backend and empty browser storage,
+ * signed in, and fails if the page logs a console error.
  */
 export const test = base.extend<{ consoleErrors: string[] }>({
   consoleErrors: [
-    async ({ page, request }, use) => {
+    async ({ page, request, baseURL }, use) => {
       await request.post(`${MOCK_URL}/__mock/reset`)
+      await page.context().addCookies([{ name: AUTH_COOKIE, value: E2E_TOKEN, url: baseURL! }])
       const errors: string[] = []
       page.on('console', (msg) => msg.type() === 'error' && errors.push(msg.text()))
       page.on('pageerror', (err) => errors.push(String(err)))

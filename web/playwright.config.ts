@@ -11,6 +11,8 @@ const executablePath = process.env.CHROMIUM_PATH
 const externalBaseUrl = process.env.E2E_BASE_URL
 
 export const MOCK_URL = `http://localhost:${MOCK_PORT}`
+// Access token of the app under test. A deployment under E2E_BASE_URL must use the same one.
+export const E2E_TOKEN = process.env.SD_WEB_TOKEN ?? 'e2e-access-token-0123456789'
 
 /**
  * End-to-end tests run the production build (vite preview) against the mock
@@ -45,7 +47,7 @@ export default defineConfig({
       : [
           {
             command: `npm run build && npx vite preview --port ${APP_PORT} --strictPort`,
-            env: { SD_API_URL: MOCK_URL },
+            env: { SD_API_URL: MOCK_URL, SD_WEB_TOKEN: E2E_TOKEN },
             url: `http://localhost:${APP_PORT}`,
             reuseExistingServer: !CI,
             timeout: 120_000,

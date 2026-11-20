@@ -1,4 +1,5 @@
 # Deploy the web UI next to sd-api-backend:  oc apply -k web/deploy
+# It needs the access token Secret first (see SD_WEB_TOKEN in deployment.yaml).
 # Override the image with:  kustomize edit set image sd-webapp-web=quay.io/<org>/sd-webapp-web:<tag>
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
