@@ -1,0 +1,27 @@
+#!/bin/sh
+# Access token for the web app. The nginx image's entrypoint sources *.envsh
+# files instead of running them, so the export below reaches the template step
+# (20-envsubst-on-templates.sh) that renders ${SD_WEB_TOKEN} into the config.
+
+if [ -z "${SD_WEB_TOKEN:-}" ]; then
+    SD_WEB_TOKEN=$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')
+    echo "SD_WEB_TOKEN is not set; generated an access token for this container:"
+    echo ""
+    echo "    $SD_WEB_TOKEN"
+    echo ""
+fi
+
+# The token is matched with a regex in the nginx config: keep it to characters
+# that need no escaping there, and long enough not to be guessed.
+case "$SD_WEB_TOKEN" in
+    *[!A-Za-z0-9_-]*)
+        echo "SD_WEB_TOKEN may only contain letters, digits, '-' and '_'" >&2
+        exit 1
+        ;;
+esac
+if [ "${#SD_WEB_TOKEN}" -lt 16 ]; then
+    echo "SD_WEB_TOKEN must be at least 16 characters long" >&2
+    exit 1
+fi
+
+export SD_WEB_TOKEN

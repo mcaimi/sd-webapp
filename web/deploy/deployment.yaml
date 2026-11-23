@@ -18,6 +18,11 @@ spec:
             # In-cluster Service of the backend; scheme://host:port, no path.
             - name: SD_API_URL
               value: http://sd-api-backend:8000
+            # Access token for the UI. Without it every replica would generate its own, so it comes
+            # from a Secret:  oc create secret generic sd-webapp-web-token --from-literal=token=$(openssl rand -hex 32)
+            - name: SD_WEB_TOKEN
+              valueFrom:
+                secretKeyRef: { name: sd-webapp-web-token, key: token }
           readinessProbe:
             httpGet: { path: /healthz, port: http }
             periodSeconds: 10

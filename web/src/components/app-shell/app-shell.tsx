@@ -16,6 +16,7 @@ import { MOD_KEY } from '@/lib/platform'
 
 import { AppSidebar } from './app-sidebar'
 import { CommandMenu } from './command-menu'
+import { SignOutButton } from './sign-out-button'
 import { ThemeToggle } from './theme-toggle'
 
 function useBreadcrumb(): string[] {
@@ -97,6 +98,7 @@ export function AppShell() {
           </Button>
           <JobDock />
           <ThemeToggle />
+          <SignOutButton />
         </header>
         <div className="flex flex-1 flex-col p-4 md:p-6">
           <AnimatedOutlet />

@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures'
+import { authHeaders, expect, test } from './fixtures'
 
 // Behaviour provided by the nginx container, not the app. Runs only against a
 // deployment: E2E_BASE_URL=http://localhost:8080 npm run e2e
@@ -27,7 +27,7 @@ test('caches hashed assets forever', async ({ request }) => {
 
 test('health endpoint and API proxy', async ({ request }) => {
   expect(await (await request.get('/healthz')).text()).toBe('ok\n')
-  const health = await request.get('/api/v1/system/health')
+  const health = await request.get('/api/v1/system/health', { headers: authHeaders })
   expect(health.status()).toBe(200)
   expect(await health.json()).toMatchObject({ status: 'healthy' })
 })
@@ -36,7 +36,33 @@ test('accepts large inpainting payloads', async ({ request }) => {
   // ~5 MB of base64, like a 1024px PNG plus mask. nginx's default limit would answer 413.
   const res = await request.post('/api/v1/sdxl/inpaint', {
     data: { positive_prompt: 'x', image_base64: 'A'.repeat(5 * 1024 * 1024) },
+    headers: authHeaders,
   })
   expect(res.status()).not.toBe(413)
   expect(res.status()).toBe(422)
+})
+
+test('guards the API with the access token', async ({ request }) => {
+  expect((await request.get('/api/v1/system/health')).status()).toBe(401)
+  const wrong = { Authorization: 'Bearer not-the-token-0123456789' }
+  expect((await request.get('/api/v1/system/health', { headers: wrong })).status()).toBe(401)
+  // Unlike plain nginx map strings, the token comparison is case-sensitive.
+  const token = authHeaders.Authorization.slice('Bearer '.length)
+  const swapped = token.replace(/[a-z]/gi, (c) => (c === c.toLowerCase() ? c.toUpperCase() : c.toLowerCase()))
+  expect(
+    (await request.get('/api/v1/system/health', { headers: { Authorization: `Bearer ${swapped}` } })).status(),
+  ).toBe(401)
+
+  expect((await request.post('/auth/session', { headers: wrong })).status()).toBe(401)
+  const signIn = await request.post('/auth/session', { headers: authHeaders })
+  expect(signIn.status()).toBe(204)
+  expect(signIn.headers()['set-cookie']).toMatch(/HttpOnly/)
+  expect(signIn.headers()['content-security-policy']).toBeTruthy()
+  // The request context keeps the cookie: the session now works without the header.
+  expect(await (await request.get('/auth/session')).json()).toEqual({ authenticated: true })
+  expect((await request.get('/api/v1/system/health')).status()).toBe(200)
+
+  expect((await request.delete('/auth/session')).status()).toBe(204)
+  expect(await (await request.get('/auth/session')).json()).toEqual({ authenticated: false })
+  expect((await request.get('/api/v1/system/health')).status()).toBe(401)
 })

@@ -1,5 +1,6 @@
 import createClient from 'openapi-fetch'
 
+import { auth } from './auth'
 import type { paths } from './schema'
 
 /**
@@ -44,9 +45,14 @@ function formatDetail(status: number, detail: unknown): string {
 /**
  * Unwrap an openapi-fetch result, throwing ApiError on non-2xx responses so
  * TanStack Query sees failures as errors.
+ *
+ * A 401 usually means the session ended (e.g. the server restarted with a new
+ * token), but the backend also answers 401 for upstream failures such as a bad
+ * Civitai key, so the session is checked before asking for the token again.
  */
 export async function unwrap<T>(request: Promise<{ data?: T; error?: unknown; response: Response }>): Promise<T> {
   const { data, error, response } = await request
+  if (response.status === 401) void auth.check()
   if (!response.ok) {
     const detail = (error as { detail?: unknown } | undefined)?.detail ?? error
     throw new ApiError(response.status, detail)
